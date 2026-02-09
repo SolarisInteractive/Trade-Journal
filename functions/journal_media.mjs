@@ -1,6 +1,6 @@
 import { getStore } from "@netlify/blobs";
 
-export default async (event) => {
+export const handler = async (event) => {
   try {
     const key = String(event.queryStringParameters?.key || "");
     if (!key) return { statusCode: 400, body: "Missing key" };

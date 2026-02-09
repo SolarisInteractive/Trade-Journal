@@ -1,6 +1,6 @@
 import { json, requireWriteKey, getIndex, saveIndex, getStore } from "./_common.mjs";
 
-export default async (event) => {
+export const handler = async (event) => {
   const authErr = requireWriteKey(event);
   if (authErr) return authErr;
 

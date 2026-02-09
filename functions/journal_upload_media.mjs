@@ -1,11 +1,12 @@
 import { json, requireWriteKey, getStore } from "./_common.mjs";
+import crypto from "node:crypto";
 
 function extFromName(name) {
   const m = /\.([a-z0-9]{1,8})$/i.exec(name || "");
   return m ? m[1].toLowerCase() : "bin";
 }
 
-export default async (event) => {
+export const handler = async (event) => {
   const authErr = requireWriteKey(event);
   if (authErr) return authErr;
 

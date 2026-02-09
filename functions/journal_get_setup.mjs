@@ -1,6 +1,6 @@
 import { json, getStore } from "./_common.mjs";
 
-export default async (event) => {
+export const handler = async (event) => {
   try {
     const setup = String(event.queryStringParameters?.setup || "").trim() || "Default";
     const store = getStore("tradejournal");
