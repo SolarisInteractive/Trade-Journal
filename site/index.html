@@ -1,0 +1,4733 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Trade Journal Viewer</title>
+  <style>
+    /* ---------- THEME TOKENS ---------- */
+    :root {
+      --bg: #ffffff;
+      --fg: #111111;
+      --muted: #666666;
+      --hint: #777777;
+
+      --border: #dddddd;
+      --border2: #e6e6e6;
+
+      --surface: #f6f6f6;
+      --surface2: #fafafa;
+
+      --pill: #f2f2f2;
+
+      --danger: #b00020;
+
+      --shadowBack: rgba(0, 0, 0, 0.55);
+    }
+
+    html[data-theme="dark"] {
+      --bg: #0f1115;
+      --fg: #e9e9ea;
+      --muted: #a9abb3;
+      --hint: #8f93a0;
+
+      --border: #2a2f3a;
+      --border2: #303647;
+
+      --surface: #151926;
+      --surface2: #121624;
+
+      --pill: #1a2031;
+
+      --danger: #ff5a6e;
+
+      --shadowBack: rgba(0, 0, 0, 0.65);
+    }
+
+    /* ---------- BASE ---------- */
+    body {
+      font-family: system-ui, Arial, sans-serif;
+      margin: 16px;
+      background: var(--bg);
+      color: var(--fg);
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    button {
+      padding: 10px 12px;
+      cursor: pointer;
+      background: var(--surface);
+      color: var(--fg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    button:hover {
+      filter: brightness(1.03);
+    }
+
+    button[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .tabs {
+      margin-top: 16px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      background: var(--surface2);
+    }
+
+    .tab.active {
+      border-color: var(--fg);
+      font-weight: 600;
+    }
+
+    .panel {
+      margin-top: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--border);
+      padding: 6px 8px;
+      font-size: 0.95rem;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface);
+      text-align: left;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    th.nosort {
+      cursor: default;
+    }
+
+    .right {
+      text-align: right;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--pill);
+      font-size: 0.85rem;
+    }
+
+    .topbar {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    input[type="search"] {
+      padding: 9px 10px;
+      min-width: 260px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface2);
+      color: var(--fg);
+    }
+
+    input[type="search"]::placeholder {
+      color: var(--hint);
+    }
+
+    .error {
+      color: var(--danger);
+      margin-top: 10px;
+      white-space: pre-wrap;
+    }
+
+    .hint {
+      font-size: 0.9rem;
+      color: var(--hint);
+    }
+
+    .thumb {
+      width: 120px;
+      height: 70px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      background: var(--surface2);
+    }
+
+    .notes {
+      width: 100%;
+      min-width: 260px;
+      min-height: 48px;
+      resize: vertical;
+      padding: 6px 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface2);
+      color: var(--fg);
+    }
+
+    .smallbtn {
+      padding: 6px 10px;
+    }
+
+    .chk {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    dialog::backdrop {
+      background: var(--shadowBack);
+    }
+
+    dialog {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 0;
+      max-width: 92vw;
+      background: var(--bg);
+      color: var(--fg);
+    }
+
+    .dlgHead {
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+
+    .dlgBody {
+      padding: 10px 12px;
+    }
+
+    .dlgImg {
+      width: 100%;
+      height: auto;
+      max-width: 100%;
+      max-height: 70vh;
+      /* adjust if you want taller */
+      display: block;
+      border-radius: 10px;
+    }
+
+
+    .sortMark {
+      font-size: 0.85rem;
+      color: var(--muted);
+      padding-left: 6px;
+    }
+
+    /* Session History */
+    .summary {
+      margin-top: 10px;
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: var(--surface2);
+    }
+
+    .summaryTitle {
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .summaryGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+    }
+
+    .summaryGrid2 {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(160px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .metric {
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: var(--bg);
+    }
+
+    .metric .label {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .metric .value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .weekdayTable {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background: var(--bg);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border2);
+    }
+
+    .weekdayTable th,
+    .weekdayTable td {
+      border: 1px solid var(--border);
+      padding: 6px 8px;
+      font-size: 0.92rem;
+    }
+
+    .weekdayTable th {
+      background: var(--surface);
+      position: static;
+      cursor: default;
+    }
+
+    /* Add Entry modal */
+    .formWrap {
+      padding: 12px;
+    }
+
+    .formGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 0.9rem;
+      color: var(--fg);
+      font-weight: 600;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font: inherit;
+      background: var(--surface2);
+      color: var(--fg);
+    }
+
+    .field textarea {
+      min-height: 90px;
+      resize: vertical;
+      grid-column: 1 / -1;
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+
+    .formBtns {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      padding-top: 10px;
+    }
+
+    .warn {
+      color: var(--danger);
+      font-size: 0.9rem;
+      margin-top: 8px;
+      white-space: pre-wrap;
+    }
+
+    .filePicked {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 900px) {
+      .summaryGrid {
+        grid-template-columns: repeat(2, minmax(140px, 1fr));
+      }
+
+      .summaryGrid2 {
+        grid-template-columns: repeat(2, minmax(160px, 1fr));
+      }
+
+      .formGrid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .formGridCols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .formGridCols .col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    @media (max-width: 900px) {
+      .formGridCols {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /*Edit Entry Modal*/
+    .editGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .editGrid .col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    @media (max-width: 900px) {
+      .editGrid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .previewGrid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
+      grid-template-rows: auto auto;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .previewCell {
+      overflow: hidden;
+    }
+
+
+    .previewCell {
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      padding: 10px;
+      background: var(--surface2);
+      min-width: 0;
+    }
+
+    .previewStatsTitle {
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .previewStats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 10px;
+    }
+
+    .previewStat {
+      border: 1px solid var(--border);
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+
+    .previewStat .label {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .previewStat .value {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-top: 2px;
+      word-break: break-word;
+    }
+
+    @media (max-width: 900px) {
+      .previewGrid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* --- Inner content tabs (inside a session) --- */
+    .contentTabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .contentTab {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface2);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .contentTab.active {
+      border-color: var(--fg);
+      font-weight: 700;
+    }
+
+    /* --- Media gallery grid --- */
+    .gallery {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 10px;
+    }
+
+    .gItem {
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      padding: 10px;
+      background: var(--surface2);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .gThumb {
+      width: 100%;
+      height: 110px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .gName {
+      font-size: 0.9rem;
+      color: var(--muted);
+      word-break: break-word;
+    }
+
+    /* Media dialog */
+    .mediaWrap {
+      padding: 10px 12px;
+    }
+
+    .mediaVideo,
+    .mediaImg {
+      max-width: 90vw;
+      max-height: 75vh;
+      border-radius: 12px;
+      display: block;
+    }
+
+    .rteWrap {
+      margin-top: 10px;
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      background: var(--surface2);
+      overflow: hidden;
+    }
+
+    .rteBar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 10px;
+      border-bottom: 1px solid var(--border2);
+      background: var(--surface);
+    }
+
+    .rteBar button,
+    .rteBar select {
+      padding: 7px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--fg);
+    }
+
+    .rteEditor {
+      min-height: 360px;
+      padding: 12px;
+      background: var(--bg);
+      color: var(--fg);
+      outline: none;
+    }
+
+    .rteEditor:empty:before {
+      content: attr(data-placeholder);
+      color: var(--hint);
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Trade Journal Viewer</h2>
+
+  <div class="row">
+    <button id="pickBtn">Pick Trade Journal folder</button>
+    <span class="muted">Select: <span class="pill">C:\Users\boywi\Documents\Trade Journal</span></span>
+    <span class="hint">Chrome/Edge desktop required.</span>
+    <span style="flex:1"></span>
+    <button id="themeBtn" class="smallbtn" title="Toggle theme">🌙 Dark</button>
+  </div>
+
+  <div class="topbar">
+    <input id="search" type="search" placeholder="Filter rows (symbol/date/etc)..." />
+    <label class="chk">
+      <input id="notesOnly" type="checkbox" />
+      Only show rows with notes
+    </label>
+
+    <label class="chk">
+      <span class="muted" style="font-weight:600;">Setup:</span>
+      <select id="setupSel"
+        style="padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:var(--surface2); color:var(--fg); min-width:220px;"
+        disabled>
+        <option value="">Pick a setup…</option>
+      </select>
+    </label>
+
+    <button id="newSetupBtn" disabled>New Setup</button>
+    <button id="addBtn" disabled>Add Entry</button>
+    <button id="importMediaBtn" disabled>Import Media</button>
+    <button id="refreshBtn" disabled>Refresh</button>
+    <button id="saveBtn" disabled>Save notes now</button>
+    <button id="csvBtn" disabled>Export current tab CSV (includes notes)</button>
+
+    <span id="status" class="muted"></span>
+  </div>
+
+  <div id="tabs" class="tabs"></div>
+  <div id="panel" class="panel"></div>
+
+  <div id="msg" class="error" style="display:none;"></div>
+
+  <!-- Image preview dialog -->
+  <dialog id="imgDlg">
+    <div class="dlgHead">
+      <div id="dlgTitle" class="muted" style="padding-right:10px;"></div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="prevImgBtn" class="smallbtn" title="Previous (←)">◀ Prev</button>
+        <button id="nextImgBtn" class="smallbtn" title="Next (→)">Next ▶</button>
+        <button id="openFileBtn" class="smallbtn">Open file</button>
+        <button id="closeDlgBtn" class="smallbtn">Close</button>
+      </div>
+    </div>
+    <div class="dlgBody">
+      <div class="previewGrid">
+        <!-- Row 1 Col 1: Image -->
+        <div class="previewCell">
+          <img id="dlgImg" class="dlgImg" alt="Preview" />
+        </div>
+
+        <!-- Row 1 Col 2: Stats -->
+        <div class="previewCell">
+          <div class="previewStatsTitle">Entry Stats</div>
+          <div id="dlgStats" class="previewStats"></div>
+        </div>
+
+        <!-- Row 2 Col 1: Notes -->
+        <div class="previewCell">
+          <div class="previewStatsTitle">Notes</div>
+          <textarea id="dlgNotes" class="notes" placeholder="Add notes…"></textarea>
+          <div class="hint">Saved to <b>notes.json</b></div>
+        </div>
+
+        <!-- Row 2 Col 2: Tags -->
+        <div class="previewCell">
+          <div class="previewStatsTitle">Tags</div>
+          <select id="dlgTags" multiple size="8" style="width:100%;"></select>
+          <div class="hint">CTRL/⌘ for multi-select — options from <b>tags.csv</b></div>
+        </div>
+      </div>
+    </div>
+
+  </dialog>
+
+  <!-- Add Entry dialog -->
+  <dialog id="addDlg">
+    <div class="dlgHead">
+      <div class="muted" style="padding-right:10px; font-weight:600;">Add Entry</div>
+      <button id="addCloseX" class="smallbtn">Close</button>
+    </div>
+    <div class="formWrap">
+      <div class="filePicked" id="pickedFileLabel">No image selected.</div>
+
+      <div class="formGridCols" style="margin-top:10px;">
+        <!-- LEFT COLUMN: core fields -->
+        <div class="col">
+          <div class="field">
+            <label for="fSession">Session</label>
+            <select id="fSession">
+              <option>SYDN</option>
+              <option>ASIA</option>
+              <option>LOND</option>
+              <option>MIDN</option>
+              <option>PRNY</option>
+              <option>NYAM</option>
+              <option>NYLU</option>
+              <option>NYPM</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="fSymbol">Symbol</label>
+            <select id="fSymbol">
+              <option>MGC!</option>
+              <option>GC!</option>
+              <option>MNQ!</option>
+              <option>NQ!</option>
+              <option>MES!</option>
+              <option>ES!</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="fDate">Date</label>
+            <input id="fDate" type="date" />
+          </div>
+
+          <div class="field">
+            <label for="fWins">Wins</label>
+            <select id="fWins"></select>
+          </div>
+
+          <div class="field">
+            <label for="fLosses">Losses</label>
+            <select id="fLosses"></select>
+          </div>
+
+          <div class="field">
+            <label for="fPartials">Partials</label>
+            <select id="fPartials"></select>
+          </div>
+
+          <div class="field">
+            <label for="fBreakEvens">Break Evens</label>
+            <select id="fBreakEvens"></select>
+          </div>
+
+          <div class="field">
+            <label for="fTicks">Ticks</label>
+            <input id="fTicks" type="number" step="1" />
+          </div>
+
+          <div class="field">
+            <label for="fTicksPot">PotentialTicks</label>
+            <input id="fTicksPot" type="number" step="1" />
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: tags + notes -->
+        <div class="col">
+          <div class="field">
+            <label for="fTags">Tags (CTRL/⌘ for multi-select)</label>
+            <select id="fTags" multiple size="10"></select>
+            <div class="hint">Tags are loaded from <b>tags.csv</b> in the journal root.</div>
+          </div>
+
+          <div class="field" style="flex:1;">
+            <label for="fNotes">Notes</label>
+            <textarea id="fNotes" placeholder="Enter notes for this entry..." style="min-height: 240px;"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="warn" id="addWarn" style="display:none;"></div>
+
+      <div class="formBtns">
+        <button id="addCancel">Cancel</button>
+        <button id="addSubmit">Submit</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Trades Taken Wizard -->
+  <dialog id="ttDlg">
+    <div class="dlgHead">
+      <div class="muted" style="font-weight:600;">Trades Taken Wizard</div>
+      <div style="display:flex; gap:8px;">
+        <button id="ttCloseX" class="smallbtn">Close</button>
+      </div>
+    </div>
+
+    <div class="formWrap">
+      <div class="muted" id="ttStageTitle" style="font-weight:700; margin-bottom:8px;">Stage 1/2</div>
+
+      <!-- Stage 1 -->
+      <div id="ttStage1">
+        <div class="hint">Checklist loaded from <b>SetupChecklist.csv</b></div>
+        <div id="ttChecklist" style="margin-top:10px; display:grid; grid-template-columns: 1fr 1fr; gap:8px;"></div>
+        <div class="hint" style="margin-top:10px;">You can require all, or just select what applies.</div>
+      </div>
+
+      <!-- Stage 2 -->
+      <div id="ttStage2" style="display:none;">
+        <div class="formGridCols">
+          <div class="col">
+            <div class="field">
+              <label for="ttSetup">Setup</label>
+              <input id="ttSetup" type="text" readonly />
+            </div>
+
+            <div class="field">
+              <label for="ttDate">Date</label>
+              <input id="ttDate" type="date" />
+            </div>
+
+            <div class="field">
+              <label for="ttEntry">Entry Time</label>
+              <input id="ttEntry" type="time" step="1" />
+              <div class="hint">Defaults to “Start Trade” timestamp.</div>
+            </div>
+
+            <div class="field">
+              <label for="ttExit">Exit Time</label>
+              <input id="ttExit" type="time" step="1" />
+            </div>
+
+            <div class="field">
+              <label>Duration</label>
+              <div class="pill" id="ttDuration">—</div>
+            </div>
+
+            <div class="field">
+              <label for="ttTicks">Ticks</label>
+              <input id="ttTicks" type="number" step="1" />
+            </div>
+
+            <div class="field">
+              <label>Trade Image (required)</label>
+              <button id="ttPickImg" class="smallbtn" type="button">Pick image…</button>
+              <div class="filePicked" id="ttPickedLabel">No image selected.</div>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="field" style="flex:1;">
+              <label for="ttNotes">Notes</label>
+              <textarea id="ttNotes" style="min-height:240px;" placeholder="Notes saved to TradesTaken.json"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="warn" id="ttWarn" style="display:none;"></div>
+      </div>
+
+      <div class="formBtns">
+        <button id="ttBack" type="button">Back</button>
+        <button id="ttNext" type="button">Next</button>
+        <button id="ttSubmit" type="button" style="display:none;">Submit</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Trades Taken Edit Modal -->
+  <dialog id="ttEditDlg">
+    <div class="dlgHead">
+      <div class="muted" style="font-weight:600;">Edit Trades Taken</div>
+      <button id="ttEditCloseX" class="smallbtn">Close</button>
+    </div>
+
+    <div class="formWrap">
+      <div class="filePicked" id="ttEditTitle">—</div>
+
+      <div class="editGrid" style="margin-top:10px;">
+        <div class="col">
+          <img id="ttEditThumb" class="dlgImg" alt="Preview"
+            style="max-height:260px; object-fit:contain; background: var(--surface2); border:1px solid var(--border);" />
+          <div class="hint" style="margin-top:6px;">
+            <button id="ttEditOpenFileBtn" class="smallbtn">Open file</button>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="field">
+            <label>Checklist</label>
+            <div id="ttEditChecklist" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;"></div>
+          </div>
+
+          <div class="field" style="flex:1;">
+            <label for="ttEditNotes">Notes</label>
+            <textarea id="ttEditNotes" style="min-height:240px;"></textarea>
+          </div>
+
+          <div class="formBtns">
+            <button id="ttEditCancel" type="button">Cancel</button>
+            <button id="ttEditSave" type="button">Save</button>
+          </div>
+
+          <div class="warn" id="ttEditWarn" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Edit Entry dialog -->
+  <dialog id="editDlg">
+    <div class="dlgHead">
+      <div class="muted" style="padding-right:10px; font-weight:600;">Edit Entry</div>
+      <button id="editCloseX" class="smallbtn">Close</button>
+    </div>
+
+    <div class="formWrap">
+      <div class="filePicked" id="editTitle">—</div>
+
+      <div class="editGrid" style="margin-top:10px;">
+        <!-- LEFT: preview + filename -->
+        <div class="col">
+          <img id="editThumb" class="dlgImg" alt="Preview"
+            style="max-height:260px; object-fit:contain; background: var(--surface2); border:1px solid var(--border);" />
+          <div class="hint" style="margin-top:6px;">
+            <button id="editOpenFileBtn" class="smallbtn">Open file</button>
+          </div>
+        </div>
+
+        <!-- RIGHT: tags + notes -->
+        <div class="col">
+          <div class="field">
+            <label for="eTags">Tags (CTRL/⌘ for multi-select)</label>
+            <select id="eTags" multiple size="10"></select>
+            <div class="hint">Loaded from <b>tags.csv</b>. Saved per entry into <b>notes.json</b>.</div>
+          </div>
+
+          <div class="field" style="flex:1;">
+            <label for="eNotes">Notes</label>
+            <textarea id="eNotes" placeholder="Enter notes..." style="min-height: 240px;"></textarea>
+          </div>
+
+          <div class="formBtns">
+            <button id="editClearTags" class="smallbtn" type="button">Clear Tags</button>
+            <span style="flex:1"></span>
+            <button id="editCancel" type="button">Cancel</button>
+            <button id="editSave" type="button">Save</button>
+          </div>
+
+          <div class="warn" id="editWarn" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Media Viewer dialog (videos + images) -->
+  <dialog id="mediaDlg">
+    <div class="dlgHead">
+      <div id="mediaTitle" class="muted" style="padding-right:10px;"></div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="mediaOpenBtn" class="smallbtn">Open file</button>
+        <button id="mediaCloseBtn" class="smallbtn">Close</button>
+      </div>
+    </div>
+    <div class="mediaWrap">
+      <img id="mediaImg" class="mediaImg" alt="" style="display:none;" />
+      <video id="mediaVideo" class="mediaVideo" controls style="display:none;"></video>
+    </div>
+  </dialog>
+
+  <script>
+    (() => {
+      const FOLDERS = ["ASIA", "LOND", "MIDN", "NYAM", "NYPM", "PRNY", "SYDN", "NYLU"];
+      const ALL_TAB = "ALL";
+
+      const HEADERS = ["SYMBOL", "YY-MM-DD", "Wins", "Losses", "Partials", "BreakEvens", "Ticks", "TicksPotential", "ImageFileFormat"];
+
+      // --- Source Files ---
+      const NOTES_FILENAME = "notes.json";
+      const TAGS_FILENAME = "tags.csv";
+      const STRATEGY_NOTES_FILENAME = "StrategyNotes.html";
+
+      const SETUP_CHECKLIST_FILENAME = "SetupChecklist.csv";
+      const TRADES_TAKEN_FILENAME = "TradesTaken.json";
+      const TRADES_TAKEN_SUBDIR = "_trades-taken";
+      let tradesTakenFileHandle = null;
+      let tradesTaken = {}; // key -> object, extensible
+      let checklistItems = []; // from SetupChecklist.csv
+
+      // wizard state
+      let ttStage = 1;
+      let startTradeTs = null;
+      let ttSourceDirHandle = null;
+      let ttSourceFileHandle = null;
+      let ttSourceFileName = "";
+      let ttSourceExt = "";
+
+      // edit state
+      let ttEditingSession = null;
+      let ttEditingFileName = null;
+
+
+      // --- IndexedDB to remember folder handles ---
+      const DB_NAME = "trade_journal_db";
+      const DB_STORE = "handles";
+      let rootDirHandle = null;   // Trade Journal root
+      let setupDirHandle = null;  // selected setup folder inside Playbook
+      let playbookDirHandle = null;
+
+      let setupNames = [];
+      let activeSetup = "";
+
+      // persistence
+      const DB_KEY_ROOT = "tradeJournalRootHandle";
+      const ACTIVE_SETUP_KEY = "trade_journal_active_setup";
+
+      const DB_KEY_SOURCE = "lastSourceDirHandle";
+
+      // --- Folder persistence ---
+      const ACTIVE_TAB_KEY = "trade_journal_active_tab";
+
+      // --- Theme persistence ---
+      const THEME_KEY = "trade_journal_theme"; // localStorage key
+      const themeBtn = document.getElementById("themeBtn");
+
+      function applyTheme(theme) {
+        document.documentElement.dataset.theme = theme;
+        localStorage.setItem(THEME_KEY, theme);
+        themeBtn.textContent = (theme === "dark") ? "☀️ Light" : "🌙 Dark";
+      }
+      function toggleTheme() {
+        const cur = document.documentElement.dataset.theme || "light";
+        applyTheme(cur === "dark" ? "light" : "dark");
+      }
+
+      function idbOpen() {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(DB_NAME, 1);
+          req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE);
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async function idbSet(key, value) {
+        const db = await idbOpen();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(DB_STORE, "readwrite");
+          tx.objectStore(DB_STORE).put(value, key);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        });
+      }
+
+      async function idbGet(key) {
+        const db = await idbOpen();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(DB_STORE, "readonly");
+          const req = tx.objectStore(DB_STORE).get(key);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      // --- App state ---
+      let baseDirHandle = null;
+      let notesFileHandle = null;
+      let tagsFileHandle = null;
+      let tagOptions = []; // available tags loaded from tags.csv
+
+      let activeTab = FOLDERS[0];
+      let dataByFolder = {};
+      let handleByFolderFile = {}; // `${folder}|${fileName}` -> FileSystemFileHandle
+      let thumbUrlCache = {};      // `${folder}|${fileName}` -> blob url
+      let activePreviewKey = null;
+      let previewList = []; // [{ folder, fileName }]
+
+      // notes in memory, flushed to notes.json
+      let notes = {};
+
+      // sorting state
+      let sortCol = "YY-MM-DD";
+      let sortDir = "asc";
+
+      // save debounce
+      let saveTimer = null;
+
+      // --- Add Entry state ---
+      let sourceDirHandle = null;
+      let sourceFileHandle = null;
+      let sourceFileName = "";
+      let sourceExt = "";
+
+      // Strategy Notes
+      let strategyNotesFileHandle = null;
+      let strategyNotesSaveTimer = null;
+
+      // Edit dialog
+      const editDlg = document.getElementById("editDlg");
+      const editCloseX = document.getElementById("editCloseX");
+      const editCancel = document.getElementById("editCancel");
+      const editSave = document.getElementById("editSave");
+      const editClearTags = document.getElementById("editClearTags");
+      const editOpenFileBtn = document.getElementById("editOpenFileBtn");
+      const editThumb = document.getElementById("editThumb");
+      const editTitle = document.getElementById("editTitle");
+      const editWarn = document.getElementById("editWarn");
+
+      const eTags = document.getElementById("eTags");
+      const eNotes = document.getElementById("eNotes");
+
+      // edit state
+      let editingFolder = null;
+      let editingFileName = null;
+
+      // Inner tab inside the active session panel
+      let sessionContentTab = "trades"; // "trades" | "examples" | "videos"
+
+      // Special subfolders (same level as ASIA/LOND/... in the setup root)
+      const EXAMPLES_DIR = "_examples-variations";
+      const VIDEOS_DIR = "_videos";
+
+      // Media dialog
+      const mediaDlg = document.getElementById("mediaDlg");
+      const mediaTitle = document.getElementById("mediaTitle");
+      const mediaOpenBtn = document.getElementById("mediaOpenBtn");
+      const mediaCloseBtn = document.getElementById("mediaCloseBtn");
+      const mediaImg = document.getElementById("mediaImg");
+      const mediaVideo = document.getElementById("mediaVideo");
+
+      // Media state
+      let activeMediaFolder = null;
+      let activeMediaFileName = null;
+      let mediaThumbCache = {}; // key -> dataURL (video thumbnails)
+
+      // UI
+      const pickBtn = document.getElementById("pickBtn");
+      const refreshBtn = document.getElementById("refreshBtn");
+      const saveBtn = document.getElementById("saveBtn");
+      const csvBtn = document.getElementById("csvBtn");
+      const addBtn = document.getElementById("addBtn");
+
+      const tabsEl = document.getElementById("tabs");
+      const panelEl = document.getElementById("panel");
+      const searchEl = document.getElementById("search");
+      const notesOnlyEl = document.getElementById("notesOnly");
+      const statusEl = document.getElementById("status");
+      const msgEl = document.getElementById("msg");
+
+      // Image dialog
+      const imgDlg = document.getElementById("imgDlg");
+      const dlgImg = document.getElementById("dlgImg");
+      const dlgTitle = document.getElementById("dlgTitle");
+      const openFileBtn = document.getElementById("openFileBtn");
+      const closeDlgBtn = document.getElementById("closeDlgBtn");
+      const prevImgBtn = document.getElementById("prevImgBtn");
+      const nextImgBtn = document.getElementById("nextImgBtn");
+      const dlgStats = document.getElementById("dlgStats");
+      const dlgNotes = document.getElementById("dlgNotes");
+      const dlgTags = document.getElementById("dlgTags");
+
+      let dlgNotesTimer = null;
+
+      // Add dialog
+      const addDlg = document.getElementById("addDlg");
+      const addCloseX = document.getElementById("addCloseX");
+      const pickedFileLabel = document.getElementById("pickedFileLabel");
+      const addWarn = document.getElementById("addWarn");
+
+      const fSession = document.getElementById("fSession");
+      const fSymbol = document.getElementById("fSymbol");
+      const fDate = document.getElementById("fDate");
+      const fWins = document.getElementById("fWins");
+      const fLosses = document.getElementById("fLosses");
+      const fPartials = document.getElementById("fPartials");
+      const fBreakEvens = document.getElementById("fBreakEvens");
+      const fTicks = document.getElementById("fTicks");
+      const fTicksPot = document.getElementById("fTicksPot");
+      const fNotes = document.getElementById("fNotes");
+
+      const addCancel = document.getElementById("addCancel");
+      const addSubmit = document.getElementById("addSubmit");
+
+      const importMediaBtn = document.getElementById("importMediaBtn");
+      const newSetupBtn = document.getElementById("newSetupBtn");
+
+      const ttDlg = document.getElementById("ttDlg");
+      const ttCloseX = document.getElementById("ttCloseX");
+      const ttStageTitle = document.getElementById("ttStageTitle");
+      const ttStage1 = document.getElementById("ttStage1");
+      const ttStage2 = document.getElementById("ttStage2");
+      const ttChecklist = document.getElementById("ttChecklist");
+      const ttBack = document.getElementById("ttBack");
+      const ttNext = document.getElementById("ttNext");
+      const ttSubmit = document.getElementById("ttSubmit");
+      const ttWarn = document.getElementById("ttWarn");
+
+      const ttSetup = document.getElementById("ttSetup");
+      const ttDate = document.getElementById("ttDate");
+      const ttEntry = document.getElementById("ttEntry");
+      const ttExit = document.getElementById("ttExit");
+      const ttTicks = document.getElementById("ttTicks");
+      const ttNotes = document.getElementById("ttNotes");
+      const ttDuration = document.getElementById("ttDuration");
+      const ttPickImg = document.getElementById("ttPickImg");
+      const ttPickedLabel = document.getElementById("ttPickedLabel");
+
+      // -- Trades Taken Edit Modal --- //
+      const ttEditDlg = document.getElementById("ttEditDlg");
+      const ttEditCloseX = document.getElementById("ttEditCloseX");
+      const ttEditTitle = document.getElementById("ttEditTitle");
+      const ttEditThumb = document.getElementById("ttEditThumb");
+      const ttEditOpenFileBtn = document.getElementById("ttEditOpenFileBtn");
+      const ttEditChecklist = document.getElementById("ttEditChecklist");
+      const ttEditNotes = document.getElementById("ttEditNotes");
+      const ttEditCancel = document.getElementById("ttEditCancel");
+      const ttEditSave = document.getElementById("ttEditSave");
+      const ttEditWarn = document.getElementById("ttEditWarn");
+
+
+
+      function showError(err) {
+        msgEl.style.display = "block";
+        msgEl.textContent = (err && err.stack) ? err.stack : String(err);
+      }
+      function clearError() {
+        msgEl.style.display = "none";
+        msgEl.textContent = "";
+      }
+      function keyFor(folder, fileName) { return `${folder}|${fileName}`; }
+
+      function revokeAllThumbs() {
+        for (const k of Object.keys(thumbUrlCache)) {
+          try { URL.revokeObjectURL(thumbUrlCache[k]); } catch { }
+        }
+        thumbUrlCache = {};
+      }
+
+      function parseFileName(name) {
+        if (!name || name.startsWith(".")) return null;
+        const lastDot = name.lastIndexOf(".");
+        if (lastDot <= 0 || lastDot === name.length - 1) return null;
+        const ext = name.slice(lastDot + 1);
+        const base = name.slice(0, lastDot);
+        const parts = base.split("_");
+
+        // Backward compatible:
+        // Old: SYMBOL_YY-MM-DD_Wins_Losses_Ticks_TicksPotential.ext (6 parts)
+        // New: SYMBOL_YY-MM-DD_Wins_Losses_Partials_BreakEvens_Ticks_TicksPotential.ext (8 parts)
+        if (parts.length !== 6 && parts.length !== 8) return null;
+
+        let symbol, date, wins, losses, partials, bes, ticks, ticksPot;
+
+        if (parts.length === 6) {
+          [symbol, date, wins, losses, ticks, ticksPot] = parts;
+          partials = "0";
+          bes = "0";
+        } else {
+          [symbol, date, wins, losses, partials, bes, ticks, ticksPot] = parts;
+        }
+
+        return {
+          "SYMBOL": symbol,
+          "YY-MM-DD": date,
+          "Wins": wins,
+          "Losses": losses,
+          "Partials": partials,
+          "BreakEvens": bes,
+          "Ticks": ticks,
+          "TicksPotential": ticksPot,
+          "ImageFileFormat": ext,
+          "__fileName": name
+        };
+      }
+
+      async function getSubdirHandle(parent, name) {
+        try { return await parent.getDirectoryHandle(name, { create: false }); }
+        catch { return null; }
+      }
+
+      async function ensureNotesFileHandle() {
+        if (!setupDirHandle) throw new Error("No setup selected.");
+        notesFileHandle = await setupDirHandle.getFileHandle(NOTES_FILENAME, { create: true });
+      }
+
+      async function loadNotesFromDisk() {
+        try {
+          await ensureNotesFileHandle();
+          const file = await notesFileHandle.getFile();
+          const text = await file.text();
+          if (!text.trim()) { notes = {}; return; }
+          const obj = JSON.parse(text);
+          notes = (obj && typeof obj === "object") ? obj : {};
+        } catch {
+          notes = {};
+        }
+      }
+
+      async function saveNotesToDisk() {
+        if (!notesFileHandle) return;
+        const writable = await notesFileHandle.createWritable();
+        await writable.write(JSON.stringify(notes, null, 2));
+        await writable.close();
+        statusEl.textContent = "Notes saved to notes.json";
+        setTimeout(() => { statusEl.textContent = ""; }, 1500);
+      }
+
+      function scheduleSave() {
+        statusEl.textContent = "Saving…";
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(async () => {
+          try { await saveNotesToDisk(); }
+          catch (e) { showError(e); }
+        }, 600);
+      }
+
+      function getNoteText(folder, fileName) {
+        const k = keyFor(folder, fileName);
+        return notes?.[k]?.text || "";
+      }
+
+      function getEntryTags(folder, fileName) {
+        const k = keyFor(folder, fileName);
+        const arr = notes?.[k]?.tags;
+        return Array.isArray(arr) ? arr : [];
+      }
+
+      function setNoteText(folder, fileName, text) {
+        const k = keyFor(folder, fileName);
+        const prev = notes[k] || {};
+        notes[k] = {
+          ...prev,
+          text: text ?? "",
+          updatedAt: new Date().toISOString()
+        };
+        scheduleSave();
+      }
+
+      async function readFolderRows(folderName, dirHandle) {
+        const rows = [];
+        for await (const [name, handle] of dirHandle.entries()) {
+          if (handle.kind !== "file") continue;
+          const row = parseFileName(name);
+          if (!row) continue;
+          row.__session = folderName; // needed for ALL tab
+          handleByFolderFile[keyFor(folderName, name)] = handle;
+          rows.push(row);
+        }
+        return rows;
+      }
+
+      async function getThumbUrl(folder, fileName) {
+        const k = keyFor(folder, fileName);
+        if (thumbUrlCache[k]) return thumbUrlCache[k];
+        const h = handleByFolderFile[k];
+        if (!h) return "";
+        const file = await h.getFile();
+        const url = URL.createObjectURL(file);
+        thumbUrlCache[k] = url;
+        return url;
+      }
+      function buildPreviewListFromCurrentView() {
+        const q = searchEl.value.trim();
+        const notesOnly = !!notesOnlyEl.checked;
+
+        const all = (dataByFolder[activeTab] || []);
+        const filtered = all.filter(r => matchesFilter(activeTab, r, q, notesOnly));
+        const rows = filtered.slice().sort((a, b) => compareRows(activeTab, a, b));
+
+        previewList = rows.map(r => ({ folder: activeTab, fileName: r.__fileName }));
+      }
+
+      function findPreviewIndex() {
+        if (!activePreviewKey) return -1;
+        const [folder, fileName] = activePreviewKey.split("|");
+        return previewList.findIndex(x => x.folder === folder && x.fileName === fileName);
+      }
+
+      async function openPreviewAt(index) {
+        if (!previewList.length) return;
+        const i = (index + previewList.length) % previewList.length;
+        const item = previewList[i];
+
+        activePreviewKey = keyFor(item.folder, item.fileName);
+
+        const url = await getThumbUrl(item.folder, item.fileName);
+        dlgImg.src = url;
+        dlgTitle.textContent = `${item.folder} — ${item.fileName}`;
+        await loadPreviewDetails(item.folder, item.fileName);
+      }
+
+      async function stepPreview(delta) {
+        if (!imgDlg.open) return;
+
+        if (!previewList.length) buildPreviewListFromCurrentView();
+        if (!previewList.length) return;
+
+        const idx = findPreviewIndex();
+        const nextIdx = (idx === -1) ? 0 : (idx + delta);
+        await openPreviewAt(nextIdx);
+      }
+
+      function updatePreviewNavButtons() {
+        const has = previewList.length > 1;
+        prevImgBtn.disabled = !has;
+        nextImgBtn.disabled = !has;
+      }
+
+      function setSelectedOptions(selectEl, values) {
+        const set = new Set(values || []);
+        for (const opt of selectEl.options) opt.selected = set.has(opt.value);
+      }
+      function getSelectedOptions(selectEl) {
+        return Array.from(selectEl.selectedOptions).map(o => o.value);
+      }
+
+      function populateDlgTags() {
+        dlgTags.innerHTML = "";
+        for (const t of tagOptions) {
+          const opt = document.createElement("option");
+          opt.value = t;
+          opt.textContent = t;
+          dlgTags.appendChild(opt);
+        }
+      }
+
+      function renderStatsBox(folder, fileName) {
+        const parsed = parseFileName(fileName); // uses your existing function
+        if (!parsed) {
+          dlgStats.innerHTML = `<div class="muted">Could not parse filename.</div>`;
+          return;
+        }
+
+        const fields = [
+          ["Session", folder],
+          ["Symbol", parsed["SYMBOL"]],
+          ["Date", parsed["YY-MM-DD"]],
+          ["Wins", parsed["Wins"]],
+          ["Losses", parsed["Losses"]],
+          ["Partials", parsed["Partials"]],
+          ["BreakEvens", parsed["BreakEvens"]],
+          ["Ticks", parsed["Ticks"]],
+          ["TicksPotential", parsed["TicksPotential"]],
+          ["Format", parsed["ImageFileFormat"]],
+          ["File", fileName],
+        ];
+
+        dlgStats.innerHTML = fields.map(([label, value]) => `
+    <div class="previewStat">
+      <div class="label">${label}</div>
+      <div class="value">${String(value ?? "")}</div>
+    </div>
+  `).join("");
+      }
+
+      async function loadPreviewDetails(folder, fileName) {
+        // Make sure tags list exists and is current
+        await loadTagsFromDisk();
+        populateDlgTags();
+
+        // Stats
+        renderStatsBox(folder, fileName);
+
+        // Notes + tags from notes.json (or empty)
+        dlgNotes.value = getNoteText(folder, fileName) || "";
+        setSelectedOptions(dlgTags, getEntryTags(folder, fileName));
+      }
+
+      async function savePreviewDetails(folder, fileName) {
+        const k = keyFor(folder, fileName);
+        const prev = notes[k] || {};
+
+        notes[k] = {
+          ...prev,
+          text: (dlgNotes.value || "").trim(),
+          tags: getSelectedOptions(dlgTags),
+          updatedAt: new Date().toISOString()
+        };
+
+        await saveNotesToDisk();
+      }
+
+      function matchesFilter(folder, row, q, notesOnly) {
+        const effFolder = (folder === ALL_TAB) ? (row.__session || "") : folder;
+
+        const note = getNoteText(effFolder, row.__fileName);
+        const tags = getEntryTags(effFolder, row.__fileName).join(" ");
+
+        if (notesOnly && !(note.trim() || tags.trim())) return false;
+        if (!q) return true;
+
+        q = q.toLowerCase();
+        return HEADERS.some(h => String(row[h] ?? "").toLowerCase().includes(q)) ||
+          String(row.__fileName ?? "").toLowerCase().includes(q) ||
+          String(row.__session ?? "").toLowerCase().includes(q) ||
+          note.toLowerCase().includes(q) ||
+          tags.toLowerCase().includes(q);
+      }
+
+      function isNumericCol(col) {
+        return ["Wins", "Losses", "Partials", "BreakEvens", "Ticks", "TicksPotential"].includes(col);
+      }
+
+      function getSortValue(folder, row, col) {
+        const effFolder = (folder === ALL_TAB) ? (row.__session || "") : folder;
+
+        if (col === "Session") return row.__session || "";
+        if (col === "FileName") return row.__fileName || "";
+        if (col === "Notes") return getNoteText(effFolder, row.__fileName) || "";
+        if (col === "Tags") return getEntryTags(effFolder, row.__fileName).join(", ") || "";
+        if (HEADERS.includes(col)) return row[col] ?? "";
+        return "";
+      }
+
+      function compareRows(folder, a, b) {
+        // In ALL view, notes/tags come from the row's own session folder
+        const folderA = (folder === ALL_TAB) ? (a.__session || "") : folder;
+        const folderB = (folder === ALL_TAB) ? (b.__session || "") : folder;
+
+        const av = (folder === ALL_TAB) ? getSortValue(ALL_TAB, a, sortCol) : getSortValue(folderA, a, sortCol);
+        const bv = (folder === ALL_TAB) ? getSortValue(ALL_TAB, b, sortCol) : getSortValue(folderB, b, sortCol);
+
+        let cmp = 0;
+        if (isNumericCol(sortCol)) {
+          const an = Number(av);
+          const bn = Number(bv);
+          if (Number.isNaN(an) && Number.isNaN(bn)) cmp = 0;
+          else if (Number.isNaN(an)) cmp = 1;
+          else if (Number.isNaN(bn)) cmp = -1;
+          else cmp = an - bn;
+        } else {
+          cmp = String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: "base" });
+        }
+
+        // Tie-breaker: stable, include session in ALL view
+        if (cmp === 0) {
+          if (folder === ALL_TAB) {
+            const sa = String(a.__session || "");
+            const sb = String(b.__session || "");
+            cmp = sa.localeCompare(sb, undefined, { numeric: true, sensitivity: "base" });
+          }
+        }
+        if (cmp === 0) cmp = String(a.__fileName).localeCompare(String(b.__fileName));
+        return sortDir === "asc" ? cmp : -cmp;
+      }
+
+      function toggleSort(col) {
+        if (sortCol === col) sortDir = (sortDir === "asc") ? "desc" : "asc";
+        else { sortCol = col; sortDir = "asc"; }
+      }
+
+      function sortMark(col) {
+        if (sortCol !== col) return "";
+        return sortDir === "asc" ? "▲" : "▼";
+      }
+
+      async function openFileDirect(folder, fileName) {
+        const k = keyFor(folder, fileName);
+        const h = handleByFolderFile[k];
+        if (!h) return;
+        const file = await h.getFile();
+        const url = URL.createObjectURL(file);
+        window.open(url, "_blank", "noopener");
+        setTimeout(() => { try { URL.revokeObjectURL(url); } catch { } }, 60_000);
+      }
+
+      // ---------- Date parsing + weekday ----------
+      function parseYYMMDD(yyMMdd) {
+        if (!yyMMdd || typeof yyMMdd !== "string") return null;
+        const m = /^(\d{2})-(\d{2})-(\d{2})$/.exec(yyMMdd.trim());
+        if (!m) return null;
+        const yy = Number(m[1]);
+        const mm = Number(m[2]);
+        const dd = Number(m[3]);
+        if ([yy, mm, dd].some(n => Number.isNaN(n))) return null;
+
+        const year = 2000 + yy;
+        const d = new Date(year, mm - 1, dd, 12, 0, 0, 0);
+        if (Number.isNaN(d.getTime())) return null;
+        return d;
+      }
+
+      function getWeekdayName(dateObj) {
+        const names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        return names[dateObj.getDay()];
+      }
+
+      function computeStatsFromRows(rows, includeMinMax = false) {
+        let winsSum = 0, lossesSum = 0, partialsSum = 0, breakEvensSum = 0;
+        let ticksSum = 0, ticksPotSum = 0;
+        let ticksCount = 0, ticksPotCount = 0;
+
+        let minTicks = Infinity, maxTicks = -Infinity;
+        let minTicksPot = Infinity, maxTicksPot = -Infinity;
+
+        for (const r of rows) {
+          const w = Number(r.Wins);
+          const l = Number(r.Losses);
+          const p = Number(r.Partials);
+          const be = Number(r.BreakEvens);
+          const t = Number(r.Ticks);
+          const tp = Number(r.TicksPotential);
+
+          if (!Number.isNaN(w)) winsSum += w;
+          if (!Number.isNaN(l)) lossesSum += l;
+          if (!Number.isNaN(p)) partialsSum += p;
+          if (!Number.isNaN(be)) breakEvensSum += be;
+
+          if (!Number.isNaN(t)) {
+            ticksSum += t; ticksCount++;
+            if (includeMinMax) { minTicks = Math.min(minTicks, t); maxTicks = Math.max(maxTicks, t); }
+          }
+          if (!Number.isNaN(tp)) {
+            ticksPotSum += tp; ticksPotCount++;
+            if (includeMinMax) { minTicksPot = Math.min(minTicksPot, tp); maxTicksPot = Math.max(maxTicksPot, tp); }
+          }
+        }
+
+        const totalOutcomes = winsSum + lossesSum + partialsSum + breakEvensSum;
+        // Win rate: Wins + Partials count as "wins"; BreakEvens are excluded.
+        const winTrades = winsSum + partialsSum;
+        const totalTrades = winsSum + partialsSum + lossesSum; // excludes BreakEvens
+        const winPct = totalTrades > 0 ? (winTrades / totalTrades) * 100 : 0;
+        const avgTicks = ticksCount > 0 ? (ticksSum / ticksCount) : 0;
+        const avgTicksPot = ticksPotCount > 0 ? (ticksPotSum / ticksPotCount) : 0;
+
+        const result = { winsSum, lossesSum, partialsSum, breakEvensSum, totalOutcomes, winPct, avgTicks, avgTicksPot };
+
+        if (includeMinMax) {
+          result.minTicks = (minTicks === Infinity) ? null : minTicks;
+          result.maxTicks = (maxTicks === -Infinity) ? null : maxTicks;
+          result.minTicksPot = (minTicksPot === Infinity) ? null : minTicksPot;
+          result.maxTicksPot = (maxTicksPot === -Infinity) ? null : maxTicksPot;
+        }
+
+        return result;
+      }
+
+      function computeSessionHistory(visibleRows) {
+        const total = computeStatsFromRows(visibleRows, true);
+
+        const order = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+        const groups = {};
+        for (const name of order) groups[name] = [];
+
+        for (const r of visibleRows) {
+          const d = parseYYMMDD(r["YY-MM-DD"]);
+          if (!d) continue;
+          const wd = getWeekdayName(d);
+          if (wd === "Saturday") continue;
+          if (!groups[wd]) groups[wd] = [];
+          groups[wd].push(r);
+        }
+
+        const byWeekday = order.map(day => ({
+          day,
+          count: groups[day].length,
+          stats: computeStatsFromRows(groups[day], false)
+        }));
+
+        return { total, byWeekday };
+      }
+
+      function fmtNumber(n, decimals = 0) {
+        if (n === null || n === undefined) return "—";
+        if (!Number.isFinite(n)) return "—";
+        return n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+      }
+
+      function renderSessionHistory(history, visibleCount, totalCount) {
+        const t = history.total;
+
+        const weekdayRowsHtml = history.byWeekday.map(w => {
+          const s = w.stats;
+          return `
+        <tr>
+          <td>${w.day}</td>
+          <td class="right">${fmtNumber(w.count, 0)}</td>
+          <td class="right">${fmtNumber(s.winsSum, 0)}</td>
+          <td class="right">${fmtNumber(s.lossesSum, 0)}</td>
+          <td class="right">${fmtNumber(s.partialsSum, 0)}</td>
+          <td class="right">${fmtNumber(s.breakEvensSum, 0)}</td>
+          <td class="right">${fmtNumber(s.winPct, 1)}%</td>
+          <td class="right">${fmtNumber(s.avgTicks, 1)}</td>
+          <td class="right">${fmtNumber(s.avgTicksPot, 1)}</td>
+        </tr>
+      `;
+        }).join("");
+
+        return `
+      <div class="summary">
+        <div class="summaryTitle">Session History <span class="muted">— based on visible rows (${visibleCount}/${totalCount})</span></div>
+
+        <div class="summaryGrid">
+          <div class="metric"><div class="label">Total Wins</div><div class="value">${fmtNumber(t.winsSum, 0)}</div></div>
+          <div class="metric"><div class="label">Total Losses</div><div class="value">${fmtNumber(t.lossesSum, 0)}</div></div>
+          <div class="metric"><div class="label">Total Partials</div><div class="value">${fmtNumber(t.partialsSum, 0)}</div></div>
+          <div class="metric"><div class="label">Total BreakEvens</div><div class="value">${fmtNumber(t.breakEvensSum, 0)}</div></div>
+          <div class="metric"><div class="label">Total Outcomes</div><div class="value">${fmtNumber(t.totalOutcomes, 0)}</div></div>
+          <div class="metric"><div class="label">Win % (Wins+Partials / W+P+L)</div><div class="value">${fmtNumber(t.winPct, 1)}%</div></div>
+          <div class="metric"><div class="label">Average Ticks</div><div class="value">${fmtNumber(t.avgTicks, 1)}</div></div>
+          <div class="metric"><div class="label">Average TicksPotential</div><div class="value">${fmtNumber(t.avgTicksPot, 1)}</div></div>
+        </div>
+
+        <div class="summaryGrid2">
+          <div class="metric"><div class="label">Lowest Ticks</div><div class="value">${fmtNumber(t.minTicks, 0)}</div></div>
+          <div class="metric"><div class="label">Highest Ticks</div><div class="value">${fmtNumber(t.maxTicks, 0)}</div></div>
+          <div class="metric"><div class="label">Lowest TicksPotential</div><div class="value">${fmtNumber(t.minTicksPot, 0)}</div></div>
+          <div class="metric"><div class="label">Highest TicksPotential</div><div class="value">${fmtNumber(t.maxTicksPot, 0)}</div></div>
+        </div>
+
+        <div class="muted" style="margin-top:10px; font-weight:600;">Weekday Breakdown (excluding Saturday)</div>
+        <table class="weekdayTable">
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th class="right">Rows</th>
+              <th class="right">Wins</th>
+              <th class="right">Losses</th>
+              <th class="right">Partials</th>
+              <th class="right">BreakEvens</th>
+              <th class="right">Win %</th>
+              <th class="right">Avg Ticks</th>
+              <th class="right">Avg TicksPotential</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${weekdayRowsHtml}
+          </tbody>
+        </table>
+      </div>
+      <div class="muted" style="margin-top:12px; font-weight:600;">Ticks Equity Curve</div>
+
+      <div class="row" style="margin-top:8px;">
+        <label class="muted" for="rangeSel" style="font-weight:600;">Range:</label>
+        <select id="rangeSel" style="padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:var(--surface2); color:var(--fg);">
+          <option value="W">Week</option>
+          <option value="M" selected>Month</option>
+          <option value="Q">Quarter</option>
+          <option value="Y">Year</option>
+          <option value="ALL">All</option>
+        </select>
+        <span class="hint">Based on visible rows in this tab.</span>
+      </div>
+
+      <div class="previewCell" style="margin-top:8px;">
+        <canvas id="equityChart" style="width:100%; height:220px;"></canvas>
+      </div>
+    `;
+      }
+
+      async function refreshAll() {
+        clearError();
+        if (!setupDirHandle) return;
+
+        revokeAllThumbs();
+        handleByFolderFile = {};
+        dataByFolder = {};
+
+        statusEl.textContent = "Reading setup folders…";
+
+        for (const folder of FOLDERS) {
+          const sub = await getDir(setupDirHandle, folder);
+          dataByFolder[folder] = sub ? await readFolderRows(folder, sub) : [];
+        }
+
+        statusEl.textContent = "";
+
+        refreshBtn.disabled = false;
+        saveBtn.disabled = false;
+        csvBtn.disabled = false;
+        addBtn.disabled = false;
+        importMediaBtn.disabled = false;
+
+        renderTabs();
+        await renderActive();
+      }
+
+      function renderTabs() {
+        tabsEl.innerHTML = "";
+
+        // ALL tab (aggregates across sessions)
+        const allCount = FOLDERS.reduce((sum, f) => sum + ((dataByFolder[f] || []).length), 0);
+        const allTab = document.createElement("div");
+        allTab.className = "tab" + (activeTab === ALL_TAB ? " active" : "");
+        allTab.textContent = `ALL (${allCount})`;
+        allTab.addEventListener("click", async () => {
+          activeTab = ALL_TAB;
+          localStorage.setItem(ACTIVE_TAB_KEY, activeTab);
+          renderTabs();
+          await renderActive();
+          // Keep Add Entry session on a real folder
+          if (fSession) fSession.value = FOLDERS.includes(activeTab) ? activeTab : (FOLDERS[0] || "ASIA");
+        });
+        tabsEl.appendChild(allTab);
+
+        for (const folder of FOLDERS) {
+          const count = (dataByFolder[folder] || []).length;
+          const tab = document.createElement("div");
+          tab.className = "tab" + (folder === activeTab ? " active" : "");
+          tab.textContent = `${folder} (${count})`;
+          tab.addEventListener("click", async () => {
+            activeTab = folder;
+            localStorage.setItem(ACTIVE_TAB_KEY, activeTab);
+            renderTabs();
+            await renderActive();
+            fSession.value = folder;
+          });
+          tabsEl.appendChild(tab);
+        }
+      }
+
+      
+      async function renderActive() {
+        const q = searchEl.value.trim();
+        const notesOnly = !!notesOnlyEl.checked;
+
+        // ALL tab aggregates visible rows across all sessions
+        const all = (activeTab === ALL_TAB)
+          ? FOLDERS.flatMap(f => (dataByFolder[f] || []))
+          : (dataByFolder[activeTab] || []);
+
+        const filtered = all.filter(r => matchesFilter(activeTab, r, q, notesOnly));
+        const rows = filtered.slice().sort((a, b) => compareRows(activeTab, a, b));
+
+        const history = computeSessionHistory(filtered);
+panelEl.innerHTML = `
+          <div class="muted">
+            <span class="pill">${activeTab}</span>
+            &nbsp; Showing ${rows.length} of ${all.length}
+            &nbsp; <span class="hint">Click headers to sort. Notes save to <b>notes.json</b>.</span>
+          </div>
+
+          ${renderSessionHistory(history, rows.length, all.length)}
+
+          ${renderContentTabsHtml()}
+
+          <div id="contentHost"></div>
+        `;
+
+        // equity curve is above the inner tabs, so wire it every render
+        wireEquityChartFromRows(filtered);
+
+        // wire up inner tabs
+        const cTabs = document.getElementById("contentTabs");
+        cTabs.addEventListener("click", async (e) => {
+          const t = e.target?.closest?.("[data-ctab]");
+          if (!t) return;
+          sessionContentTab = t.dataset.ctab;
+          await renderActive(); // rerender with new inner tab
+        });
+
+        const host = document.getElementById("contentHost");
+
+        if (sessionContentTab !== "trades") {
+          if (sessionContentTab === "taken") {
+            await renderTradesTakenInto(host, activeTab);
+          } else if (sessionContentTab === "examples") {
+            await renderGalleryInto(host, EXAMPLES_DIR, "Images from _examples-variations");
+          } else if (sessionContentTab === "videos") {
+            await renderGalleryInto(host, VIDEOS_DIR, "Videos from _videos");
+          } else if (sessionContentTab === "notes") {
+            await renderStrategyNotesInto(host);
+          } else {
+            // fallback
+            sessionContentTab = "trades";
+            await renderActive();
+            return;
+          }
+          return;
+        }
+
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const trh = document.createElement("tr");
+
+        const thThumb = document.createElement("th");
+
+        if (sessionContentTab === "trades") {
+          thThumb.textContent = "Thumbnail";
+          thThumb.className = "nosort";
+          trh.appendChild(thThumb);
+
+          // Session column in ALL view
+          if (activeTab === ALL_TAB) {
+            const thS = document.createElement("th");
+            thS.innerHTML = `Session<span class="sortMark">${sortMark("Session")}</span>`;
+            thS.addEventListener("click", async () => {
+              toggleSort("Session");
+              await renderActive();
+            });
+            trh.appendChild(thS);
+          }
+
+          for (const h of HEADERS) {
+            const th = document.createElement("th");
+            th.innerHTML = `${h}<span class="sortMark">${sortMark(h)}</span>`;
+            th.addEventListener("click", async () => {
+              toggleSort(h);
+              await renderActive();
+            });
+            trh.appendChild(th);
+          }
+
+          const thFile = document.createElement("th");
+          thFile.innerHTML = `FileName<span class="sortMark">${sortMark("FileName")}</span>`;
+          thFile.addEventListener("click", async () => {
+            toggleSort("FileName");
+            await renderActive();
+          });
+          trh.appendChild(thFile);
+
+          const thTags = document.createElement("th");
+          thTags.innerHTML = `Tags<span class="sortMark">${sortMark("Tags")}</span>`;
+          thTags.addEventListener("click", async () => {
+            toggleSort("Tags");
+            await renderActive();
+          });
+          trh.appendChild(thTags);
+
+          const thNotes = document.createElement("th");
+          thNotes.innerHTML = `Notes<span class="sortMark">${sortMark("Notes")}</span>`;
+          thNotes.addEventListener("click", async () => {
+            toggleSort("Notes");
+            await renderActive();
+          });
+          trh.appendChild(thNotes);
+
+          thead.appendChild(trh);
+          table.appendChild(thead);
+
+          const tbody = document.createElement("tbody");
+
+          for (const r of rows) {
+            const tr = document.createElement("tr");
+            const rowFolder = (activeTab === ALL_TAB) ? (r.__session || activeTab) : activeTab;
+
+            tr.addEventListener("dblclick", async () => {
+              try { await openEditModal(rowFolder, r.__fileName); }
+              catch (e) { showError(e); }
+            });
+
+            const tdThumb = document.createElement("td");
+            const img = document.createElement("img");
+            img.className = "thumb";
+            img.alt = "thumb";
+            img.loading = "lazy";
+            tdThumb.appendChild(img);
+
+            getThumbUrl(rowFolder, r.__fileName).then(url => { img.src = url; }).catch(() => { });
+
+            img.addEventListener("click", async () => {
+              buildPreviewListFromCurrentView();
+              updatePreviewNavButtons();
+
+              activePreviewKey = keyFor(rowFolder, r.__fileName);
+              const url = await getThumbUrl(rowFolder, r.__fileName);
+              dlgImg.src = url;
+              dlgTitle.textContent = `${rowFolder} — ${r.__fileName}`;
+
+              await loadPreviewDetails(rowFolder, r.__fileName); // <-- ADD THIS
+
+              imgDlg.showModal();
+            });
+
+
+            tr.appendChild(tdThumb);
+
+            if (activeTab === ALL_TAB) {
+              const tdS = document.createElement("td");
+              tdS.textContent = rowFolder || "";
+              tr.appendChild(tdS);
+            }
+
+            for (const h of HEADERS) {
+              const td = document.createElement("td");
+              td.textContent = r[h] ?? "";
+              if (["Wins", "Losses", "Partials", "BreakEvens", "Ticks", "TicksPotential"].includes(h)) td.className = "right";
+              tr.appendChild(td);
+            }
+
+            const tdName = document.createElement("td");
+            const a = document.createElement("a");
+            a.href = "#";
+            a.textContent = r.__fileName || "";
+            a.title = "Open file in new tab";
+            a.addEventListener("click", async (e) => {
+              e.preventDefault();
+              try { await openFileDirect(rowFolder, r.__fileName); }
+              catch (err) { showError(err); }
+            });
+            tdName.appendChild(a);
+            tr.appendChild(tdName);
+
+            const tdTags = document.createElement("td");
+            tdTags.textContent = getEntryTags(rowFolder, r.__fileName).join(", ");
+            tr.appendChild(tdTags);
+
+            const tdNotes = document.createElement("td");
+            const ta = document.createElement("textarea");
+            ta.className = "notes";
+            ta.placeholder = "Add notes…";
+            ta.value = getNoteText(rowFolder, r.__fileName);
+
+            let t = null;
+            ta.addEventListener("input", () => {
+              if (t) clearTimeout(t);
+              t = setTimeout(() => setNoteText(activeTab, r.__fileName, ta.value), 200);
+            });
+
+            tdNotes.appendChild(ta);
+            tr.appendChild(tdNotes);
+
+            tbody.appendChild(tr);
+          }
+
+          table.appendChild(tbody);
+          host.appendChild(table);
+          return;
+        }
+
+        // --- Equity chart wiring (after panelEl.innerHTML has the canvas) ---
+        const rangeSel = document.getElementById("rangeSel");
+        const canvas = document.getElementById("equityChart");
+
+        if (rangeSel && canvas) {
+          const redraw = () => {
+            const key = rangeSel.value;
+            const start = rangeStartDate(key);
+
+            // Start from filtered rows (visible set), then apply date-range
+            const inRange = start
+              ? filtered.filter(r => {
+                const d = parseYYMMDD(r["YY-MM-DD"]);
+                return d && d >= start;
+              })
+              : filtered;
+
+            const series = buildCumulativeTicksSeries(inRange);
+            drawLineChart(canvas, series);
+          };
+
+          // Set default once per render
+          if (!rangeSel.dataset.bound) {
+            rangeSel.dataset.bound = "1";
+            rangeSel.addEventListener("change", redraw);
+            window.addEventListener("resize", redraw);
+          }
+
+          redraw();
+        }
+
+      }
+
+      async function ensureTradesTakenFileHandle() {
+        if (!setupDirHandle) throw new Error("No setup selected.");
+        tradesTakenFileHandle = await setupDirHandle.getFileHandle(TRADES_TAKEN_FILENAME, { create: true });
+      }
+
+      async function loadTradesTakenFromDisk() {
+        try {
+          await ensureTradesTakenFileHandle();
+          const file = await tradesTakenFileHandle.getFile();
+          const text = await file.text();
+          tradesTaken = text.trim() ? JSON.parse(text) : {};
+          if (!tradesTaken || typeof tradesTaken !== "object") tradesTaken = {};
+        } catch {
+          tradesTaken = {};
+        }
+      }
+
+      async function saveTradesTakenToDisk() {
+        if (!tradesTakenFileHandle) return;
+        const w = await tradesTakenFileHandle.createWritable();
+        await w.write(JSON.stringify(tradesTaken, null, 2));
+        await w.close();
+      }
+
+      async function loadSetupChecklistFromDisk() {
+        checklistItems = [];
+        if (!setupDirHandle) return;
+
+        let fh = null;
+        try {
+          fh = await setupDirHandle.getFileHandle(SETUP_CHECKLIST_FILENAME, { create: false });
+        } catch {
+          checklistItems = [];
+          return;
+        }
+        const text = await (await fh.getFile()).text();
+
+        const lines = (text || "")
+          .split(/\r?\n/)
+          .map(s => s.trim())
+          .filter(Boolean);
+
+        // optional header "item"
+        const start = (lines[0]?.toLowerCase() === "item") ? 1 : 0;
+
+        const seen = new Set();
+        for (let i = start; i < lines.length; i++) {
+          const v = lines[i];
+          if (!seen.has(v)) { seen.add(v); checklistItems.push(v); }
+        }
+      }
+
+
+      async function renderGalleryInto(hostEl, dirName, subtitle) {
+        hostEl.innerHTML = `<div class="muted" style="margin-top:8px;">${subtitle}</div>`;
+
+        const items = await readMediaDir(dirName);
+        if (!items.length) {
+          hostEl.innerHTML += `<div class="hint" style="margin-top:8px;">No files found in <b>${dirName}</b>.</div>`;
+          return;
+        }
+
+        const grid = document.createElement("div");
+        grid.className = "gallery";
+
+        for (const it of items) {
+          // filter by type
+          if (dirName === VIDEOS_DIR && !isVideoFile(it.name)) continue;
+          if (dirName === EXAMPLES_DIR && !(isImageFile(it.name) || isVideoFile(it.name))) continue;
+
+          const card = document.createElement("div");
+          card.className = "gItem";
+
+          const img = document.createElement("img");
+          img.className = "gThumb";
+          img.alt = it.name;
+
+          // thumbnails
+          try {
+            if (isVideoFile(it.name)) {
+              img.src = await getVideoThumbDataUrl(it.handle);
+            } else {
+              const file = await it.handle.getFile();
+              img.src = URL.createObjectURL(file);
+              // revoke once loaded (keeps it from leaking)
+              img.onload = () => { try { URL.revokeObjectURL(img.src); } catch { } };
+            }
+          } catch {
+            // fallback: leave blank
+            img.src = "";
+          }
+
+          const name = document.createElement("div");
+          name.className = "gName";
+          name.textContent = it.name;
+
+          card.appendChild(img);
+          card.appendChild(name);
+
+          card.addEventListener("click", async () => {
+            try { await openMedia(it.dirName, it.name, it.handle); }
+            catch (e) { showError(e); }
+          });
+
+          grid.appendChild(card);
+        }
+
+        hostEl.appendChild(grid);
+      }
+
+      function wireEquityChartFromRows(filteredRows) {
+        const rangeSel = document.getElementById("rangeSel");
+        const canvas = document.getElementById("equityChart");
+        if (!rangeSel || !canvas) return;
+
+        const redraw = () => {
+          const key = rangeSel.value;
+          const start = rangeStartDate(key);
+
+          const inRange = start
+            ? filteredRows.filter(r => {
+              const d = parseYYMMDD(r["YY-MM-DD"]);
+              return d && d >= start;
+            })
+            : filteredRows;
+
+          const series = buildCumulativeTicksSeries(inRange);
+          drawLineChart(canvas, series);
+        };
+
+        // Bind once per element instance
+        if (!rangeSel.dataset.bound) {
+          rangeSel.dataset.bound = "1";
+          rangeSel.addEventListener("change", redraw);
+
+          // prevent stacking resize listeners
+          if (!window.__equityResizeBound) {
+            window.__equityResizeBound = true;
+            window.addEventListener("resize", () => {
+              // on resize, redraw using current filtered set by re-calling renderActive()
+              // BUT we can do lightweight redraw if we store last series; simplest:
+              const rs = document.getElementById("rangeSel");
+              if (!rs) return;
+              rs.dispatchEvent(new Event("change"));
+            });
+          }
+        }
+
+        redraw();
+      }
+
+      function toCSV(folder, rows) {
+        const cols = ["Thumbnail", ...HEADERS, "FileName", "Tags", "Notes"];
+        const esc = (v) => {
+          const s = String(v ?? "");
+          if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+          return s;
+        };
+        const lines = [];
+        lines.push(cols.join(","));
+        for (const r of rows) {
+          const note = getNoteText(folder, r.__fileName);
+          const tags = getEntryTags(folder, r.__fileName).join(", ");
+          lines.push([
+            "",
+            ...HEADERS.map(h => esc(r[h])),
+            esc(r.__fileName),
+            esc(tags),
+            esc(note)
+          ].join(","));
+        }
+        return lines.join("\n");
+      }
+
+      function downloadText(filename, text) {
+        const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function renderContentTabsHtml() {
+        const mk = (id, label) =>
+          `<div class="contentTab ${sessionContentTab === id ? "active" : ""}" data-ctab="${id}">${label}</div>`;
+
+        return `
+          <div class="contentTabs" id="contentTabs">
+            ${mk("trades", "Session Trades")}
+            ${mk("taken", "Trades Taken")}
+            ${mk("examples", "Examples & Variations")}
+            ${mk("videos", "Videos")}
+            ${mk("notes", "Strategy Notes")}
+          </div>
+        `;
+      }
+
+      async function readMediaDir(dirName) {
+        const dir = await getSubdirHandle(baseDirHandle, dirName);
+        if (!dir) return [];
+        const items = [];
+        for await (const [name, handle] of dir.entries()) {
+          if (handle.kind !== "file") continue;
+          if (name.startsWith(".")) continue;
+          items.push({ name, handle, dirName });
+        }
+        // simple alpha sort
+        items.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
+        return items;
+      }
+
+      function isVideoFile(name) {
+        const ext = (name.split(".").pop() || "").toLowerCase();
+        return ["mp4", "webm", "mov", "m4v", "mkv", "avi"].includes(ext);
+      }
+
+      function isImageFile(name) {
+        const ext = (name.split(".").pop() || "").toLowerCase();
+        return ["png", "jpg", "jpeg", "webp", "gif", "bmp", "tif", "tiff"].includes(ext);
+      }
+
+      // Create a decent-looking video thumbnail (first frame)
+      async function getVideoThumbDataUrl(fileHandle) {
+        const file = await fileHandle.getFile();
+        const cacheKey = `${file.name}|${file.size}|${file.lastModified}`;
+        if (mediaThumbCache[cacheKey]) return mediaThumbCache[cacheKey];
+
+        const url = URL.createObjectURL(file);
+
+        try {
+          const v = document.createElement("video");
+          v.src = url;
+          v.muted = true;
+          v.playsInline = true;
+
+          await new Promise((res, rej) => {
+            v.onloadeddata = () => res();
+            v.onerror = () => rej(new Error("Could not load video for thumbnail"));
+          });
+
+          // seek slightly forward so you don't get a black first frame
+          try {
+            v.currentTime = Math.min(0.2, (v.duration || 1) * 0.05);
+            await new Promise((res) => (v.onseeked = () => res()));
+          } catch { }
+
+          const w = 320;
+          const h = Math.round((v.videoHeight / v.videoWidth) * w) || 180;
+
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(v, 0, 0, w, h);
+
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          mediaThumbCache[cacheKey] = dataUrl;
+          return dataUrl;
+        } finally {
+          try { URL.revokeObjectURL(url); } catch { }
+        }
+      }
+
+      async function openMedia(dirName, fileName, fileHandle) {
+        activeMediaFolder = dirName;
+        activeMediaFileName = fileName;
+
+        mediaTitle.textContent = `${dirName}\\${fileName}`;
+
+        // reset
+        mediaImg.style.display = "none";
+        mediaVideo.style.display = "none";
+        mediaImg.src = "";
+        mediaVideo.pause();
+        mediaVideo.removeAttribute("src");
+        mediaVideo.load();
+
+        const file = await fileHandle.getFile();
+        const url = URL.createObjectURL(file);
+
+        // Choose viewer
+        if (isVideoFile(fileName)) {
+          mediaVideo.style.display = "block";
+          mediaVideo.src = url;
+        } else {
+          // images or unknown treated as image
+          mediaImg.style.display = "block";
+          mediaImg.src = url;
+        }
+
+        mediaDlg.showModal();
+
+        // revoke URL after close
+        const revoke = () => { try { URL.revokeObjectURL(url); } catch { } };
+        mediaDlg.addEventListener("close", revoke, { once: true });
+      }
+
+      mediaCloseBtn.addEventListener("click", () => mediaDlg.close());
+
+      mediaOpenBtn.addEventListener("click", async () => {
+        try {
+          if (!activeMediaFolder || !activeMediaFileName) return;
+          const dir = await getSubdirHandle(baseDirHandle, activeMediaFolder);
+          if (!dir) return;
+          const fh = await dir.getFileHandle(activeMediaFileName, { create: false });
+          const file = await fh.getFile();
+          const url = URL.createObjectURL(file);
+          window.open(url, "_blank", "noopener");
+          setTimeout(() => { try { URL.revokeObjectURL(url); } catch { } }, 60_000);
+        } catch (e) {
+          showError(e);
+        }
+      });
+
+      // ---------- Add Entry ----------
+      function fill0to20(sel) {
+        sel.innerHTML = "";
+        for (let i = 0; i <= 20; i++) {
+          const opt = document.createElement("option");
+          opt.value = String(i);
+          opt.textContent = String(i);
+          sel.appendChild(opt);
+        }
+      }
+
+      function setAddDefaults() {
+        fSession.value = (FOLDERS.includes(activeTab) ? activeTab : (FOLDERS[0] || "ASIA"));
+        fSymbol.value = "MGC!";
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        fDate.value = `${yyyy}-${mm}-${dd}`;
+        fWins.value = "0";
+        fLosses.value = "0";
+        fPartials.value = "0";
+        fBreakEvens.value = "0";
+        fTicks.value = "";
+        fTicksPot.value = "";
+        fNotes.value = "";
+        const tagSel = document.getElementById("fTags");
+        if (tagSel) {
+          for (const opt of tagSel.options) opt.selected = false;
+        }
+      }
+
+      function showAddWarn(text) {
+        addWarn.style.display = "block";
+        addWarn.textContent = text;
+      }
+      function clearAddWarn() {
+        addWarn.style.display = "none";
+        addWarn.textContent = "";
+      }
+
+      function yymmddFromISO(iso) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+        if (!m) return null;
+        const yy = m[1].slice(2);
+        return `${yy}-${m[2]}-${m[3]}`;
+      }
+
+      async function tryRestoreSourceHandle() {
+        try {
+          const h = await idbGet(DB_KEY_SOURCE);
+          if (!h) return null;
+          const perm = await h.queryPermission({ mode: "readwrite" });
+          if (perm !== "granted") return null;
+          return h;
+        } catch {
+          return null;
+        }
+      }
+
+      async function pickSourceFolderAndFile() {
+        let restored = await tryRestoreSourceHandle();
+
+        if (restored) {
+          sourceDirHandle = restored;
+        } else {
+          sourceDirHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+          const perm = await sourceDirHandle.requestPermission({ mode: "readwrite" });
+          if (perm !== "granted") throw new Error("Permission denied for source folder.");
+          await idbSet(DB_KEY_SOURCE, sourceDirHandle);
+        }
+
+        const [fh] = await window.showOpenFilePicker({
+          multiple: false,
+          startIn: sourceDirHandle,
+          types: [
+            {
+              description: "Images",
+              accept: {
+                "image/*": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff"]
+              }
+            }
+          ]
+        });
+
+        sourceFileHandle = fh;
+        sourceFileName = fh.name || "";
+        const dot = sourceFileName.lastIndexOf(".");
+        sourceExt = (dot >= 0) ? sourceFileName.slice(dot + 1) : "";
+        if (!sourceExt) throw new Error("Selected file has no extension.");
+
+        pickedFileLabel.textContent = `Selected image: ${sourceFileName}`;
+      }
+
+      async function submitAddEntry() {
+        clearAddWarn();
+
+        if (!baseDirHandle) throw new Error("Trade Journal folder not selected.");
+        if (!sourceDirHandle || !sourceFileHandle || !sourceFileName || !sourceExt) {
+          throw new Error("No source image selected.");
+        }
+
+        const session = fSession.value;
+        const symbol = fSymbol.value;
+        const ymd = yymmddFromISO(fDate.value);
+        const wins = fWins.value;
+        const losses = fLosses.value;
+        const partials = fPartials.value;
+        const breakEvens = fBreakEvens.value;
+
+        if (!session || !FOLDERS.includes(session)) return showAddWarn("Invalid Session.");
+        if (!symbol) return showAddWarn("Symbol is required.");
+        if (!ymd) return showAddWarn("Date is required.");
+        if (wins === "" || losses === "" || partials === "" || breakEvens === "") return showAddWarn("Wins/Losses/Partials/BreakEvens required.");
+        if (!Number.isFinite(Number(fTicks.value))) return showAddWarn("Ticks must be a number.");
+        if (!Number.isFinite(Number(fTicksPot.value))) return showAddWarn("PotentialTicks must be a number.");
+
+        const ticks = String(Number(fTicks.value));
+        const ticksPot = String(Number(fTicksPot.value));
+
+        const newFileName = `${symbol}_${ymd}_${wins}_${losses}_${partials}_${breakEvens}_${ticks}_${ticksPot}.${sourceExt}`;
+
+        if (!setupDirHandle) throw new Error("No setup selected.");
+        const destDir = await setupDirHandle.getDirectoryHandle(session, { create: true });
+
+        try {
+          await destDir.getFileHandle(newFileName, { create: false });
+          return showAddWarn(`A file already exists:\n${session}\\${newFileName}\n\nChange values or rename source file.`);
+        } catch { }
+
+        const srcFile = await sourceFileHandle.getFile();
+        const buf = await srcFile.arrayBuffer();
+
+        const destFileHandle = await destDir.getFileHandle(newFileName, { create: true });
+        const w = await destFileHandle.createWritable();
+        await w.write(buf);
+        await w.close();
+
+        const selectedTags = getSelectedTagsFromUI();
+
+        notes[keyFor(session, newFileName)] = {
+          text: (fNotes.value || "").trim(),
+          tags: selectedTags,
+          updatedAt: new Date().toISOString()
+        };
+
+        await saveNotesToDisk();
+
+        await sourceDirHandle.removeEntry(sourceFileName);
+
+        await idbSet(DB_KEY_SOURCE, sourceDirHandle);
+
+        sourceDirHandle = null;
+        sourceFileHandle = null;
+        sourceFileName = "";
+        sourceExt = "";
+        pickedFileLabel.textContent = "No image selected.";
+      }
+
+      function showEditWarn(text) {
+        editWarn.style.display = "block";
+        editWarn.textContent = text;
+      }
+      function clearEditWarn() {
+        editWarn.style.display = "none";
+        editWarn.textContent = "";
+      }
+
+      function populateEditTagMultiSelect() {
+        if (!eTags) return;
+        eTags.innerHTML = "";
+        for (const t of tagOptions) {
+          const opt = document.createElement("option");
+          opt.value = t;
+          opt.textContent = t;
+          eTags.appendChild(opt);
+        }
+      }
+
+      async function openEditModal(folder, fileName) {
+        clearEditWarn();
+        editingFolder = folder;
+        editingFileName = fileName;
+
+        // Ensure latest tags list (in case you edited tags.csv)
+        await loadTagsFromDisk();
+        populateEditTagMultiSelect();
+
+        editTitle.textContent = `${folder}\\${fileName}`;
+
+        // thumb
+        try {
+          const url = await getThumbUrl(folder, fileName);
+          editThumb.src = url || "";
+        } catch {
+          editThumb.src = "";
+        }
+
+        // load existing saved data (or empty)
+        const noteText = getNoteText(folder, fileName);
+        const tagsArr = getEntryTags(folder, fileName);
+
+        eNotes.value = noteText;
+        setSelectedOptions(eTags, tagsArr);
+
+        editDlg.showModal();
+      }
+
+      async function saveEditModal() {
+        clearEditWarn();
+        if (!editingFolder || !editingFileName) return;
+
+        const k = keyFor(editingFolder, editingFileName);
+        const prev = notes[k] || {};
+
+        notes[k] = {
+          ...prev,
+          text: (eNotes.value || "").trim(),
+          tags: getSelectedOptions(eTags),
+          updatedAt: new Date().toISOString()
+        };
+
+        await saveNotesToDisk();
+
+        // refresh table so Tags column updates immediately
+        await renderActive();
+
+        editDlg.close();
+      }
+
+      async function ensureTagsFileHandle() {
+        // Create tags.csv if missing (with defaults)
+        try {
+          tagsFileHandle = await setupDirHandle.getFileHandle(TAGS_FILENAME, { create: false });
+        } catch {
+          tagsFileHandle = await setupDirHandle.getFileHandle(TAGS_FILENAME, { create: true });
+
+          const defaults = [
+            "tag",
+            "FVG",
+            "VWAP",
+            "ORB",
+            "Sweep",
+            "LiquidityGrab",
+            "Reversal",
+            "Continuation",
+            "CounterTrend",
+            "Breakout",
+            "Pullback",
+            "Range",
+            "News",
+            "A+Setup",
+            "FOMO",
+            "Overtrade",
+          ].join("\n");
+
+          const w = await tagsFileHandle.createWritable();
+          await w.write(defaults);
+          await w.close();
+        }
+      }
+
+      function parseTagsCsv(text) {
+        const lines = (text || "")
+          .split(/\r?\n/)
+          .map(s => s.trim())
+          .filter(Boolean);
+
+        // allow either a header "tag" or no header
+        const startIdx = (lines[0]?.toLowerCase() === "tag") ? 1 : 0;
+
+        // de-dupe + preserve order
+        const seen = new Set();
+        const tags = [];
+        for (let i = startIdx; i < lines.length; i++) {
+          const t = lines[i];
+          if (!seen.has(t)) {
+            seen.add(t);
+            tags.push(t);
+          }
+        }
+        return tags;
+      }
+
+      function sanitizeTitleForFileName(s) {
+        // Windows-safe-ish: remove invalid filename characters and trim
+        return String(s || "")
+          .trim()
+          .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")   // invalid
+          .replace(/\s+/g, " ")                    // collapse whitespace
+          .replace(/[. ]+$/g, "");                 // no trailing dot/space
+      }
+
+      function getDestFolderForMedia(fileName) {
+        if (isVideoFile(fileName)) return VIDEOS_DIR;
+        if (isImageFile(fileName)) return EXAMPLES_DIR;
+        return null;
+      }
+
+      async function fileExists(dirHandle, name) {
+        try {
+          await dirHandle.getFileHandle(name, { create: false });
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      async function uniqueNameInDir(dirHandle, baseName, ext) {
+        let candidate = `${baseName}.${ext}`;
+        if (!(await fileExists(dirHandle, candidate))) return candidate;
+
+        // add (2), (3), ...
+        let i = 2;
+        while (true) {
+          candidate = `${baseName} (${i}).${ext}`;
+          if (!(await fileExists(dirHandle, candidate))) return candidate;
+          i++;
+        }
+      }
+
+      async function importAndOrganizeMedia() {
+        clearError();
+
+        if (!setupDirHandle) throw new Error("No setup selected.");
+
+        // Pick files (user can select multiple)
+        const handles = await window.showOpenFilePicker({
+          multiple: true,
+          // no startIn here to keep it simple & avoid permission issues
+          types: [
+            {
+              description: "Images & Videos",
+              accept: {
+                "image/*": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff"],
+                "video/*": [".mp4", ".webm", ".mov", ".m4v", ".mkv", ".avi"]
+              }
+            }
+          ]
+        });
+
+
+        // Ask for title once (used for renaming)
+        let title = prompt("Enter a title for these media files (they will be renamed as: setupname - title):", "");
+        if (title === null) return; // cancelled
+        title = sanitizeTitleForFileName(title);
+        if (!title) throw new Error("Title is required.");
+
+        // Ensure destination folders exist
+        const examplesDir = await setupDirHandle.getDirectoryHandle(EXAMPLES_DIR, { create: true });
+        const videosDir = await setupDirHandle.getDirectoryHandle(VIDEOS_DIR, { create: true });
+
+        const setupName = sanitizeTitleForFileName(activeSetup || "Setup");
+
+        let ok = 0;
+        let skipped = 0;
+
+        for (const fh of handles) {
+          const file = await fh.getFile();
+          const srcName = fh.name || file.name || "media";
+          const destFolderName = getDestFolderForMedia(srcName);
+
+          if (!destFolderName) {
+            skipped++;
+            continue;
+          }
+
+          const dot = srcName.lastIndexOf(".");
+          const ext = (dot >= 0 ? srcName.slice(dot + 1) : "").toLowerCase();
+          if (!ext) { skipped++; continue; }
+
+          const base = `${setupName} - ${title}`;
+          const destDir = (destFolderName === VIDEOS_DIR) ? videosDir : examplesDir;
+
+          const finalName = await uniqueNameInDir(destDir, base, ext);
+
+          // Copy bytes to destination
+          const buf = await file.arrayBuffer();
+          const destHandle = await destDir.getFileHandle(finalName, { create: true });
+          const w = await destHandle.createWritable();
+          await w.write(buf);
+          await w.close();
+
+          // Try to delete original (true "move" if allowed)
+          // Note: showOpenFilePicker doesn't give parent dir handle, so we cannot remove original reliably.
+          // If later you want true move, we can switch to folder picker + iterate entries.
+          ok++;
+        }
+
+        statusEl.textContent = `Imported: ${ok}${skipped ? `, skipped: ${skipped}` : ""}`;
+        setTimeout(() => (statusEl.textContent = ""), 2000);
+
+        // Refresh the current view so new media shows up
+        await renderActive();
+      }
+
+      importMediaBtn.addEventListener("click", async () => {
+        try {
+          importMediaBtn.disabled = true;
+          await importAndOrganizeMedia();
+        } catch (e) {
+          showError(e);
+        } finally {
+          importMediaBtn.disabled = false;
+        }
+      });
+
+      ttCloseX.addEventListener("click", () => ttDlg.close());
+
+      ttBack.addEventListener("click", () => {
+        if (ttStage > 1) { ttStage--; setTTStageUI(); }
+      });
+
+      ttNext.addEventListener("click", () => {
+        if (ttStage < 2) { ttStage++; setTTStageUI(); }
+      });
+
+      ttPickImg.addEventListener("click", async () => {
+        try { await pickTradeTakenImage(); }
+        catch (e) { showTTWarn(e?.message || String(e)); }
+      });
+
+      ttEntry.addEventListener("input", updateTTDuration);
+      ttExit.addEventListener("input", updateTTDuration);
+
+      ttSubmit.addEventListener("click", async () => {
+        try {
+          ttSubmit.disabled = true;
+          await submitTradesTakenWizard();
+        } catch (e) {
+          showTTWarn(e?.message || String(e));
+        } finally {
+          ttSubmit.disabled = false;
+        }
+      });
+
+      ttEditCloseX.addEventListener("click", () => ttEditDlg.close());
+      ttEditCancel.addEventListener("click", () => ttEditDlg.close());
+      ttEditSave.addEventListener("click", async () => {
+        try { ttEditSave.disabled = true; await saveTradesTakenEdit(); }
+        catch (e) { showTTEditWarn(e?.message || String(e)); }
+        finally { ttEditSave.disabled = false; }
+      });
+      ttEditOpenFileBtn.addEventListener("click", async () => {
+        try {
+          if (!ttEditingSession || !ttEditingFileName) return;
+          // open the trade taken file
+          const sessionDir = await getDir(setupDirHandle, ttEditingSession);
+          const ttDir = await getSubdirHandle(sessionDir, TRADES_TAKEN_SUBDIR);
+          const fh = await ttDir.getFileHandle(ttEditingFileName, { create: false });
+          const file = await fh.getFile();
+          const url = URL.createObjectURL(file);
+          window.open(url, "_blank", "noopener");
+          setTimeout(() => { try { URL.revokeObjectURL(url); } catch { } }, 60_000);
+        } catch (e) { showTTEditWarn(e?.message || String(e)); }
+      });
+
+
+
+      async function loadTagsFromDisk() {
+        await ensureTagsFileHandle();
+        const file = await tagsFileHandle.getFile();
+        const text = await file.text();
+        tagOptions = parseTagsCsv(text);
+      }
+
+      function populateTagMultiSelect() {
+        const sel = document.getElementById("fTags");
+        if (!sel) return;
+
+        sel.innerHTML = "";
+        for (const t of tagOptions) {
+          const opt = document.createElement("option");
+          opt.value = t;
+          opt.textContent = t;
+          sel.appendChild(opt);
+        }
+      }
+
+      function getSelectedTagsFromUI() {
+        const sel = document.getElementById("fTags");
+        if (!sel) return [];
+        return Array.from(sel.selectedOptions).map(o => o.value);
+      }
+
+      const savedTab = localStorage.getItem(ACTIVE_TAB_KEY);
+      if (savedTab && (savedTab === ALL_TAB || FOLDERS.includes(savedTab))) activeTab = savedTab;
+
+      async function tryRestoreJournalHandle() {
+        try {
+          const h = await idbGet(DB_KEY_ROOT); // ROOT folder now
+          if (!h) return false;
+
+          const perm = await h.queryPermission({ mode: "readwrite" });
+          if (perm !== "granted") return false;
+
+          rootDirHandle = h;
+
+          // Locate Playbook
+          playbookDirHandle = await getDir(rootDirHandle, "Playbook");
+          if (!playbookDirHandle) return false;
+
+          // Discover setups
+          setupNames = await listSubfolders(playbookDirHandle);
+
+          // Restore last active setup
+          const saved = localStorage.getItem(ACTIVE_SETUP_KEY) || "";
+          activeSetup =
+            (saved && setupNames.includes(saved))
+              ? saved
+              : (setupNames[0] || "");
+
+          renderSetupDropdown();
+          if (newSetupBtn) newSetupBtn.disabled = false;
+
+          if (activeSetup) {
+            await setActiveSetup(activeSetup);
+          }
+
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+
+      async function getDir(parent, name) {
+        try { return await parent.getDirectoryHandle(name, { create: false }); }
+        catch { return null; }
+      }
+
+      async function listSubfolders(dirHandle) {
+        const out = [];
+        for await (const [name, h] of dirHandle.entries()) {
+          if (h.kind === "directory" && !name.startsWith(".")) out.push(name);
+        }
+        out.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+        return out;
+      }
+
+      const setupSel = document.getElementById("setupSel");
+
+      function renderSetupDropdown() {
+        setupSel.innerHTML = "";
+        const opt0 = document.createElement("option");
+        opt0.value = "";
+        opt0.textContent = "Pick a setup…";
+        setupSel.appendChild(opt0);
+
+        for (const name of setupNames) {
+          const opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          setupSel.appendChild(opt);
+        }
+
+        setupSel.disabled = setupNames.length === 0;
+        setupSel.value = activeSetup || "";
+      }
+
+      async function setActiveSetup(name) {
+        if (!rootDirHandle) throw new Error("Root Trade Journal folder not selected.");
+
+        // Locate Playbook folder
+        playbookDirHandle = await getDir(rootDirHandle, "Playbook");
+        if (!playbookDirHandle) throw new Error(`Missing folder: Trade Journal\\Playbook`);
+
+        // Locate selected setup folder
+        const setup = await getDir(playbookDirHandle, name);
+        if (!setup) throw new Error(`Setup folder not found: Playbook\\${name}`);
+
+        setupDirHandle = setup;
+        activeSetup = name;
+        baseDirHandle = setupDirHandle; // keep legacy variable pointing at active setup folder
+
+        localStorage.setItem(ACTIVE_SETUP_KEY, activeSetup);
+
+        // Important: notes/tags are per-setup now
+        await loadNotesFromDisk();   // must read from setupDirHandle (see next section)
+        await loadTradesTakenFromDisk();
+        await loadSetupChecklistFromDisk();
+        await loadTagsFromDisk();    // must read from setupDirHandle
+        populateTagMultiSelect();    // Add Entry modal
+        populateDlgTags?.();         // Preview modal tags, if you have it
+        populateEditTagMultiSelect?.();
+
+        await refreshAll();          // must read session folders from setupDirHandle
+
+        statusEl.textContent = `Setup: ${activeSetup}`;
+        setTimeout(() => statusEl.textContent = "", 1200);
+      }
+
+      // ---------- Create a new setup folder in Playbook ----------
+      function sanitizeFolderName(name) {
+        return String(name || "")
+          .trim()
+          // keep letters (upper/lower), numbers, space, underscore, dash
+          .replace(/[^A-Za-z0-9 _-]/g, "")
+          .replace(/\s+/g, " ")
+          .replace(/[. ]+$/g, "");
+      }
+
+
+      async function ensureFileWithText(dirHandle, fileName, text) {
+        const fh = await dirHandle.getFileHandle(fileName, { create: true });
+        const file = await fh.getFile();
+        // Only write defaults if empty
+        if (file.size === 0) {
+          const w = await fh.createWritable();
+          await w.write(text);
+          await w.close();
+        }
+        return fh;
+      }
+
+      async function createSetupStructure(setupFolderName) {
+        if (!rootDirHandle) throw new Error("Root Trade Journal folder not selected.");
+
+        // ensure Playbook exists
+        playbookDirHandle = await getDir(rootDirHandle, "Playbook");
+        if (!playbookDirHandle) {
+          playbookDirHandle = await rootDirHandle.getDirectoryHandle("Playbook", { create: true });
+        }
+
+        // create setup folder
+        const setupDir = await playbookDirHandle.getDirectoryHandle(setupFolderName, { create: true });
+
+        // required top-level dirs
+        await setupDir.getDirectoryHandle(EXAMPLES_DIR, { create: true });
+        await setupDir.getDirectoryHandle(VIDEOS_DIR, { create: true });
+
+        // session dirs + _trades-taken within each
+        for (const session of FOLDERS) {
+          const sdir = await setupDir.getDirectoryHandle(session, { create: true });
+          await sdir.getDirectoryHandle("_trades-taken", { create: true });
+        }
+
+        // required files (per-setup)
+        await ensureFileWithText(setupDir, NOTES_FILENAME, "{}\n");
+        await ensureFileWithText(setupDir, "TradesTaken.json", "{}\n");
+
+        // tags.csv defaults
+        const tagsDefault = [
+          "tag",
+          "FVG",
+          "VWAP",
+          "ORB",
+          "Sweep",
+          "LiquidityGrab",
+          "Reversal",
+          "Continuation",
+          "CounterTrend",
+          "Breakout",
+          "Pullback",
+          "Range",
+          "News",
+          "A+Setup",
+          "FOMO",
+          "Overtrade",
+        ].join("\n") + "\n";
+        await ensureFileWithText(setupDir, TAGS_FILENAME, tagsDefault);
+
+        // SetupChecklist.csv defaults (you can edit this later)
+        const checklistDefault = [
+          "item",
+          "Market structure aligned",
+          "Liquidity sweep present",
+          "FVG / imbalance confirmed",
+          "Entry at key level",
+          "Risk defined (stop placement)",
+          "No obvious news risk",
+        ].join("\n") + "\n";
+        await ensureFileWithText(setupDir, "SetupChecklist.csv", checklistDefault);
+
+        return setupDir;
+      }
+
+
+      async function createNewSetup() {
+        if (!rootDirHandle) throw new Error("Pick your Trade Journal folder first.");
+
+        const raw = prompt("New setup name (folder will be created under Playbook):", "");
+        if (raw === null) return; // cancelled
+        const name = sanitizeFolderName(raw);
+        if (!name) throw new Error("Setup name is required.");
+
+        // ensure Playbook + check existing
+        playbookDirHandle = await getDir(rootDirHandle, "Playbook");
+        if (!playbookDirHandle) {
+          playbookDirHandle = await rootDirHandle.getDirectoryHandle("Playbook", { create: true });
+        }
+
+        // check if exists
+        const existing = await listSubfolders(playbookDirHandle);
+        if (existing.includes(name)) {
+          throw new Error(`A setup named "${name}" already exists.`);
+        }
+
+        await createSetupStructure(name);
+
+        // refresh setups list + select new one
+        setupNames = await listSubfolders(playbookDirHandle);
+        activeSetup = name;
+        renderSetupDropdown();
+        if (newSetupBtn) newSetupBtn.disabled = false;
+        await setActiveSetup(name);
+      }
+
+
+      function parseTradesTakenFileName(fileName) {
+        // setupname_YY-MM-DD_entry-HH-MM-SS_exit-HH-MM-SS_ticks.ext
+        const dot = fileName.lastIndexOf(".");
+        if (dot <= 0) return null;
+        const ext = fileName.slice(dot + 1);
+        const base = fileName.slice(0, dot);
+
+        const parts = base.split("_");
+        if (parts.length < 5) return null;
+
+        const setup = parts[0];
+        const ymd = parts[1];
+        const entry = parts[2]?.replace(/^entry-/, "") || "";
+        const exit = parts[3]?.replace(/^exit-/, "") || "";
+        const ticks = parts[4];
+
+        return { setup, ymd, entry, exit, ticks, ext, __fileName: fileName };
+      }
+
+      async function readTradesTakenRowsForSession(session) {
+        const out = [];
+        const sessionDir = await getDir(setupDirHandle, session);
+        if (!sessionDir) return out;
+
+        const ttDir = await getSubdirHandle(sessionDir, TRADES_TAKEN_SUBDIR);
+        if (!ttDir) return out;
+
+        for await (const [name, handle] of ttDir.entries()) {
+          if (handle.kind !== "file") continue;
+          const parsed = parseTradesTakenFileName(name);
+          if (!parsed) continue;
+
+          // Store handle under a unique key so thumb loader can work
+          const k = `${session}|${TRADES_TAKEN_SUBDIR}|${name}`;
+          handleByFolderFile[k] = handle;
+
+          out.push({ ...parsed, __handleKey: k });
+        }
+
+        // sort by date+entry
+        out.sort((a, b) => (a.ymd + " " + a.entry).localeCompare(b.ymd + " " + b.entry));
+        return out;
+      }
+
+      async function getTradesTakenThumbUrl(row) {
+        const k = row.__handleKey;
+        if (thumbUrlCache[k]) return thumbUrlCache[k];
+        const h = handleByFolderFile[k];
+        if (!h) return "";
+        const file = await h.getFile();
+        const url = URL.createObjectURL(file);
+        thumbUrlCache[k] = url;
+        return url;
+      }
+
+      function tradesTakenKey(session, fileName) {
+        return `${session}|${fileName}`;
+      }
+
+      function getTradesTakenMeta(session, fileName) {
+        const k = tradesTakenKey(session, fileName);
+        return tradesTaken?.[k] || {};
+      }
+
+      function computeDuration(entryHHMMSS, exitHHMMSS) {
+        // assume same day; if exit earlier than entry, treat as next day
+        const toSec = (s) => {
+          const m = /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(s || "");
+          if (!m) return null;
+          return (+m[1]) * 3600 + (+m[2]) * 60 + (+m[3] || 0);
+        };
+        const a = toSec(entryHHMMSS);
+        const b = toSec(exitHHMMSS);
+        if (a == null || b == null) return null;
+        let d = b - a;
+        if (d < 0) d += 24 * 3600;
+        return d;
+      }
+
+      function fmtDuration(sec) {
+        if (sec == null) return "—";
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = sec % 60;
+        if (h) return `${h}h ${m}m ${s}s`;
+        if (m) return `${m}m ${s}s`;
+        return `${s}s`;
+      }
+
+      async function renderTradesTakenInto(hostEl, session) {
+        hostEl.innerHTML = `
+    <div class="row" style="margin-top:6px;">
+      <div class="muted"><b>${session}</b> / ${TRADES_TAKEN_SUBDIR}</div>
+      <span style="flex:1"></span>
+      <button id="startTradeBtn" class="smallbtn">Start Trade</button>
+    </div>
+    <div class="hint" style="margin-top:6px;">Double-click a row to edit checklist/notes.</div>
+  `;
+
+        const rows = await readTradesTakenRowsForSession(session);
+
+        // Ensure checklist items loaded so we can compute grade/score
+        await loadSetupChecklistFromDisk();
+
+        if (!rows.length) {
+          hostEl.innerHTML += `<div class="hint" style="margin-top:10px;">No trades found yet.</div>`;
+        }
+
+        const table = document.createElement("table");
+        table.innerHTML = `
+    <thead>
+      <tr>
+        <th class="nosort">Thumb</th>
+        <th>Date</th>
+        <th>Entry</th>
+        <th>Exit</th>
+        <th>Duration</th>
+        <th class="right">Ticks</th>
+        <th>Setup</th>
+        <th>Checklist</th>
+        <th>Notes</th>
+        <th>File</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+
+        const tbody = table.querySelector("tbody");
+
+        for (const r of rows) {
+          const meta = getTradesTakenMeta(session, r.__fileName);
+          const ck = normalizeChecklistForEdit(meta.checklist, checklistItems);
+          const scorePct = Math.round((ck.percent || 0) * 100);
+          const grade = ck.grade || gradeFromPercent(ck.percent || 0);
+          const note = meta.notes || "";
+
+          const dur = fmtDuration(computeDuration(r.entry, r.exit));
+
+          const tr = document.createElement("tr");
+          tr.addEventListener("dblclick", async () => {
+            try { await openTradesTakenEditModal(session, r.__fileName, r); }
+            catch (e) { showError(e); }
+          });
+
+          const tdT = document.createElement("td");
+          const img = document.createElement("img");
+          img.className = "thumb";
+          img.loading = "lazy";
+          tdT.appendChild(img);
+          getTradesTakenThumbUrl(r).then(u => img.src = u).catch(() => { });
+
+          img.addEventListener("click", async () => {
+            // reuse your media viewer
+            const h = handleByFolderFile[r.__handleKey];
+            if (h) await openMedia(`${session}\\${TRADES_TAKEN_SUBDIR}`, r.__fileName, h);
+          });
+
+          tr.appendChild(tdT);
+          tr.insertAdjacentHTML("beforeend", `
+            <td>${r.ymd}</td>
+            <td>${r.entry}</td>
+            <td>${r.exit}</td>
+            <td>${dur}</td>
+            <td class="right">${r.ticks}</td>
+            <td>${r.setup}</td>
+            <td>${grade} — ${scorePct}%</td>
+            <td>${note}</td>
+            <td>${r.__fileName}</td>
+          `);
+
+          tbody.appendChild(tr);
+        }
+
+        hostEl.appendChild(table);
+
+        // Start Trade button
+        hostEl.querySelector("#startTradeBtn").addEventListener("click", async () => {
+          try {
+            startTradeTs = new Date();              // capture "Start Trade"
+            await openTradesTakenWizard(session);   // open wizard
+          } catch (e) {
+            showError(e);
+          }
+        });
+      }
+
+      function rangeStartDate(rangeKey) {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+
+        if (rangeKey === "W") start.setDate(start.getDate() - 7);
+        else if (rangeKey === "M") start.setMonth(start.getMonth() - 1);
+        else if (rangeKey === "Q") start.setMonth(start.getMonth() - 3);
+        else if (rangeKey === "Y") start.setFullYear(start.getFullYear() - 1);
+        else return null; // ALL
+        return start;
+      }
+
+      function buildCumulativeTicksSeries(rows) {
+        // Aggregate ticks per day then cumulative sum
+        const dayMap = new Map(); // yyyy-mm-dd -> ticksSum
+        for (const r of rows) {
+          const d = parseYYMMDD(r["YY-MM-DD"]);
+          if (!d) continue;
+
+          const ticks = Number(r.Ticks);
+          if (Number.isNaN(ticks)) continue;
+
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          dayMap.set(key, (dayMap.get(key) || 0) + ticks);
+        }
+
+        const days = Array.from(dayMap.entries())
+          .map(([k, v]) => ({ date: new Date(k + "T12:00:00"), ticks: v }))
+          .sort((a, b) => a.date - b.date);
+
+        let cum = 0;
+        const series = [];
+        for (const x of days) {
+          cum += x.ticks;
+          series.push({ date: x.date, value: cum });
+        }
+        return series;
+      }
+
+      function drawLineChart(canvas, series) {
+        if (!canvas) return;
+
+        // Make canvas resolution match CSS size
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        const w = Math.max(10, Math.floor(rect.width * dpr));
+        const h = Math.max(10, Math.floor(rect.height * dpr));
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width = w;
+          canvas.height = h;
+        }
+
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, w, h);
+
+        // If no data
+        if (!series || series.length < 2) {
+          ctx.font = `${14 * dpr}px system-ui`;
+          ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim() || "#666";
+          ctx.fillText("Not enough data to chart.", 12 * dpr, 24 * dpr);
+          return;
+        }
+
+        const padL = 50 * dpr, padR = 16 * dpr, padT = 16 * dpr, padB = 32 * dpr;
+
+        const xs = series.map(p => p.date.getTime());
+        const ys = series.map(p => p.value);
+
+        const xmin = Math.min(...xs), xmax = Math.max(...xs);
+        let ymin = Math.min(...ys), ymax = Math.max(...ys);
+        if (ymin === ymax) { ymin -= 1; ymax += 1; }
+
+        const xToPx = (x) => padL + ((x - xmin) / (xmax - xmin)) * (w - padL - padR);
+        const yToPx = (y) => padT + (1 - ((y - ymin) / (ymax - ymin))) * (h - padT - padB);
+
+        // Colors
+        const styles = getComputedStyle(document.documentElement);
+        const fg = (styles.getPropertyValue("--fg").trim() || "#111");
+        const border = (styles.getPropertyValue("--border").trim() || "#ddd");
+        const muted = (styles.getPropertyValue("--muted").trim() || "#666");
+
+        // Axes
+        ctx.strokeStyle = border;
+        ctx.lineWidth = 1 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(padL, padT);
+        ctx.lineTo(padL, h - padB);
+        ctx.lineTo(w - padR, h - padB);
+        ctx.stroke();
+
+        // Y ticks (3)
+        ctx.fillStyle = muted;
+        ctx.font = `${12 * dpr}px system-ui`;
+        const yTicks = 3;
+        for (let i = 0; i <= yTicks; i++) {
+          const t = i / yTicks;
+          const yVal = ymin + (1 - t) * (ymax - ymin);
+          const yPx = padT + t * (h - padT - padB);
+
+          ctx.strokeStyle = border;
+          ctx.beginPath();
+          ctx.moveTo(padL, yPx);
+          ctx.lineTo(w - padR, yPx);
+          ctx.stroke();
+
+          ctx.fillText(String(Math.round(yVal)), 8 * dpr, yPx + 4 * dpr);
+        }
+
+        // Line
+        ctx.strokeStyle = fg;
+        ctx.lineWidth = 2 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(xToPx(xs[0]), yToPx(ys[0]));
+        for (let i = 1; i < series.length; i++) {
+          ctx.lineTo(xToPx(xs[i]), yToPx(ys[i]));
+        }
+        ctx.stroke();
+
+        // Last point marker
+        ctx.fillStyle = fg;
+        const lx = xToPx(xs[xs.length - 1]);
+        const ly = yToPx(ys[ys.length - 1]);
+        ctx.beginPath();
+        ctx.arc(lx, ly, 3.5 * dpr, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Label last value
+        ctx.fillStyle = fg;
+        ctx.fillText(`Cum: ${Math.round(ys[ys.length - 1])}`, Math.max(padL, lx - 60 * dpr), padT + 14 * dpr);
+      }
+
+      // ---- events ----
+      document.getElementById("themeBtn").addEventListener("click", toggleTheme);
+
+      pickBtn.addEventListener("click", async () => {
+        clearError();
+        try {
+          const h = await window.showDirectoryPicker({ mode: "readwrite" });
+          const perm = await h.requestPermission({ mode: "readwrite" });
+          if (perm !== "granted") throw new Error("Permission denied.");
+
+          rootDirHandle = h;
+          await idbSet(DB_KEY_ROOT, h);
+
+          // Discover setups
+          playbookDirHandle = await getDir(rootDirHandle, "Playbook");
+          if (!playbookDirHandle) throw new Error("Missing folder: Playbook");
+
+          setupNames = await listSubfolders(playbookDirHandle);
+
+          // Restore last setup (if still exists)
+          const saved = localStorage.getItem(ACTIVE_SETUP_KEY) || "";
+          activeSetup = (saved && setupNames.includes(saved)) ? saved : (setupNames[0] || "");
+
+          renderSetupDropdown();
+          if (newSetupBtn) newSetupBtn.disabled = false;
+
+          if (activeSetup) {
+            await setActiveSetup(activeSetup);
+          } else {
+            statusEl.textContent = "No setups found in Playbook.";
+          }
+        } catch (e) {
+          if (e && e.name === "AbortError") return;
+          showError(e);
+        }
+      });
+
+      newSetupBtn.addEventListener("click", async () => {
+        try {
+          newSetupBtn.disabled = true;
+          await createNewSetup();
+        } catch (e) {
+          if (e && e.name === "AbortError") return;
+          showError(e);
+        } finally {
+          // re-enable if root is still available
+          newSetupBtn.disabled = !rootDirHandle;
+        }
+      });
+
+      setupSel.addEventListener("change", async () => {
+        const name = setupSel.value;
+        if (!name) return;
+        try { await setActiveSetup(name); }
+        catch (e) { showError(e); }
+      });
+
+      document.getElementById("refreshBtn").addEventListener("click", async () => {
+        try { await refreshAll(); } catch (e) { showError(e); }
+      });
+
+      document.getElementById("saveBtn").addEventListener("click", async () => {
+        try { await saveNotesToDisk(); } catch (e) { showError(e); }
+      });
+
+      searchEl.addEventListener("input", async () => renderActive());
+      notesOnlyEl.addEventListener("change", async () => renderActive());
+
+      document.getElementById("csvBtn").addEventListener("click", () => {
+        const q = searchEl.value.trim();
+        const notesOnly = !!notesOnlyEl.checked;
+        const all = (dataByFolder[activeTab] || []);
+        const filtered = all.filter(r => matchesFilter(activeTab, r, q, notesOnly));
+        const rows = filtered.slice().sort((a, b) => compareRows(activeTab, a, b));
+
+        const csv = toCSV(activeTab, rows);
+        const ts = new Date().toISOString().slice(0, 10);
+        downloadText(`${activeTab}_${ts}.csv`, csv);
+      });
+
+      closeDlgBtn.addEventListener("click", () => imgDlg.close());
+
+      openFileBtn.addEventListener("click", async () => {
+        try {
+          if (!activePreviewKey) return;
+          const [folder, fileName] = activePreviewKey.split("|");
+          await openFileDirect(folder, fileName);
+        } catch (e) {
+          showError(e);
+        }
+      });
+
+      addBtn.addEventListener("click", async () => {
+        clearError();
+        clearAddWarn();
+
+        if (!baseDirHandle) {
+          showAddWarn("Pick the Trade Journal folder first.");
+          addDlg.showModal();
+          return;
+        }
+
+        try {
+          await pickSourceFolderAndFile();
+          setAddDefaults();
+          await loadTagsFromDisk();
+          populateTagMultiSelect();
+          addDlg.showModal();
+        } catch (e) {
+          if (e && e.name === "AbortError") return;
+          showError(e);
+        }
+      });
+
+      addCloseX.addEventListener("click", () => addDlg.close());
+      addCancel.addEventListener("click", () => addDlg.close());
+
+      addSubmit.addEventListener("click", async () => {
+        try {
+          addSubmit.disabled = true;
+          await submitAddEntry();
+          location.reload();
+        } catch (e) {
+          showAddWarn((e && e.message) ? e.message : String(e));
+        } finally {
+          addSubmit.disabled = false;
+        }
+      });
+
+      editCloseX.addEventListener("click", () => editDlg.close());
+      editCancel.addEventListener("click", () => editDlg.close());
+
+      editClearTags.addEventListener("click", () => {
+        for (const opt of eTags.options) opt.selected = false;
+      });
+
+      editSave.addEventListener("click", async () => {
+        try {
+          editSave.disabled = true;
+          await saveEditModal();
+        } catch (e) {
+          showEditWarn((e && e.message) ? e.message : String(e));
+        } finally {
+          editSave.disabled = false;
+        }
+      });
+
+      editOpenFileBtn.addEventListener("click", async () => {
+        try {
+          if (!editingFolder || !editingFileName) return;
+          await openFileDirect(editingFolder, editingFileName);
+        } catch (e) {
+          showEditWarn((e && e.message) ? e.message : String(e));
+        }
+      });
+
+      window.addEventListener("beforeunload", () => {
+        revokeAllThumbs();
+      });
+
+      prevImgBtn.addEventListener("click", async () => {
+        try { await stepPreview(-1); } catch (e) { showError(e); }
+      });
+
+      nextImgBtn.addEventListener("click", async () => {
+        try { await stepPreview(1); } catch (e) { showError(e); }
+      });
+
+      dlgNotes.addEventListener("input", async () => {
+        if (!activePreviewKey) return;
+        if (dlgNotesTimer) clearTimeout(dlgNotesTimer);
+
+        dlgNotesTimer = setTimeout(async () => {
+          try {
+            const [folder, fileName] = activePreviewKey.split("|");
+            await savePreviewDetails(folder, fileName);
+
+            // refresh table so Tags + Notes columns update without closing
+            await renderActive();
+          } catch (e) {
+            showError(e);
+          }
+        }, 400);
+      });
+
+      dlgTags.addEventListener("change", async () => {
+        if (!activePreviewKey) return;
+        try {
+          const [folder, fileName] = activePreviewKey.split("|");
+          await savePreviewDetails(folder, fileName);
+          await renderActive();
+        } catch (e) {
+          showError(e);
+        }
+      });
+
+      // Arrow key navigation when the preview is open
+      document.addEventListener("keydown", async (e) => {
+        if (!imgDlg.open) return;
+        if (e.key === "ArrowLeft") { e.preventDefault(); await stepPreview(-1); }
+        if (e.key === "ArrowRight") { e.preventDefault(); await stepPreview(1); }
+      });
+
+      
+      // ─────────────────────────────────────────────────────────────────────────────
+      // NETLIFY MODE (hosted, shared storage)
+      // - Uses Netlify Functions + Netlify Blobs for shared data + media
+      // - Keeps local "folder picker" mode working for file:// usage
+      // ─────────────────────────────────────────────────────────────────────────────
+      const NETLIFY_MODE = (location.protocol === "https:" || location.protocol === "http:") && !location.href.startsWith("file:");
+      let nlSetupData = null;              // in-memory JSON for active setup
+      let nlSetupIndex = [];               // ["Setup A", "Setup B", ...]
+      let nlMediaUrlByKey = {};            // "SESSION|filename.ext" -> https url
+      let nlExamples = [];                // [{name,url,type}]
+      let nlVideos = [];                  // [{name,url,type}]
+
+      async function nlApiGet(path) {
+        const r = await fetch(`/.netlify/functions/${path}`, { credentials: "include" });
+        if (!r.ok) throw new Error(`API GET failed: ${path} (${r.status})`);
+        return await r.json();
+      }
+      async function nlApiPost(path, body, requireKey = true) {
+        const headers = { "Content-Type": "application/json" };
+
+        if (requireKey) {
+          // Optional write key (in addition to Netlify password protection). Stored in sessionStorage.
+          let k = sessionStorage.getItem("TJ_WRITE_KEY") || "";
+          if (!k) {
+            k = prompt("Enter Trade Journal write key (for uploads/saves):", "") || "";
+            if (k) sessionStorage.setItem("TJ_WRITE_KEY", k);
+          }
+          if (k) headers["X-Journal-Key"] = k;
+        }
+
+        const r = await fetch(`/.netlify/functions/${path}`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(body || {}),
+          credentials: "include"
+        });
+        if (!r.ok) {
+          const t = await r.text().catch(() => "");
+          throw new Error(`API POST failed: ${path} (${r.status}) ${t}`.trim());
+        }
+        return await r.json();
+      }
+
+      function nlDefaultSetupData(setupName) {
+        return {
+          version: 1,
+          setup: setupName,
+          tags: tagOptions && tagOptions.length ? tagOptions : [],
+          notes: {},
+          strategyNotesHtml: "",
+          sessions: Object.fromEntries(FOLDERS.map(s => [s, []])),
+          examples: [],
+          videos: [],
+          tradesTaken: Object.fromEntries(FOLDERS.map(s => [s, []])) // per session array of {fileName,url,meta}
+        };
+      }
+
+      function nlBuildMediaMapsFromData() {
+        nlMediaUrlByKey = {};
+        nlExamples = Array.isArray(nlSetupData?.examples) ? nlSetupData.examples : [];
+        nlVideos = Array.isArray(nlSetupData?.videos) ? nlSetupData.videos : [];
+
+        for (const sess of FOLDERS) {
+          const rows = (nlSetupData?.sessions?.[sess] || []);
+          for (const r of rows) {
+            if (r?.fileName && r?.imageUrl) nlMediaUrlByKey[`${sess}|${r.fileName}`] = r.imageUrl;
+          }
+        }
+      }
+
+      async function nlLoadSetupIndex() {
+        const j = await nlApiGet("journal_list_setups");
+        nlSetupIndex = Array.isArray(j.setups) ? j.setups : [];
+        return nlSetupIndex;
+      }
+
+      async function nlLoadSetupData(setupName) {
+        const j = await nlApiGet(`journal_get_setup?setup=${encodeURIComponent(setupName)}`);
+        nlSetupData = j?.data || nlDefaultSetupData(setupName);
+        // hydrate tags + notes + media maps
+        tagOptions = Array.isArray(nlSetupData.tags) ? nlSetupData.tags : [];
+        notes = (nlSetupData.notes && typeof nlSetupData.notes === "object") ? nlSetupData.notes : {};
+        nlBuildMediaMapsFromData();
+        return nlSetupData;
+      }
+
+      async function nlSaveSetupData() {
+        if (!activeSetup) throw new Error("No setup selected.");
+        // persist current in-memory notes/tags/strategy notes (and any recent changes)
+        if (!nlSetupData) nlSetupData = nlDefaultSetupData(activeSetup);
+        nlSetupData.setup = activeSetup;
+        nlSetupData.tags = Array.isArray(tagOptions) ? tagOptions : [];
+        nlSetupData.notes = (notes && typeof notes === "object") ? notes : {};
+        // examples/videos are already in nlSetupData
+        await nlApiPost("journal_save_setup", { setup: activeSetup, data: nlSetupData }, true);
+      }
+
+      async function nlUploadMedia(file, kind /* "trade"|"example"|"video"|"taken" */) {
+        // Send as base64 to keep things simple (works fine for screenshots)
+        const buf = await file.arrayBuffer();
+        const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+        const payload = {
+          setup: activeSetup || "Default",
+          kind: kind || "trade",
+          name: file.name || "upload",
+          mime: file.type || "application/octet-stream",
+          dataB64: b64
+        };
+        const res = await nlApiPost("journal_upload_media", payload, true);
+        return res; // {url, key, storedName}
+      }
+
+      // --- Netlify mode overrides ---
+      if (NETLIFY_MODE) {
+        // UI tweaks
+        try {
+          pickBtn.textContent = "Netlify Mode";
+          pickBtn.disabled = true;
+        } catch { }
+
+        // Disable FS-persistence (we use server storage)
+        async function tryRestoreJournalHandle() { return true; }
+        async function idbSet() { }
+        async function idbGet() { return null; }
+
+        // Notes/tags now live in setup JSON
+        loadNotesFromDisk = async function () {
+          notes = (nlSetupData?.notes && typeof nlSetupData.notes === "object") ? nlSetupData.notes : {};
+        };
+        saveNotesToDisk = async function () {
+          await nlSaveSetupData();
+          statusEl.textContent = "Saved";
+          setTimeout(() => { statusEl.textContent = ""; }, 1200);
+        };
+        ensureNotesFileHandle = async function () { };
+        ensureTagsFileHandle = async function () { };
+        loadTagsFromDisk = async function () {
+          tagOptions = Array.isArray(nlSetupData?.tags) ? nlSetupData.tags : tagOptions;
+        };
+        loadTradesTakenFromDisk = async function () { /* trades taken is inside nlSetupData */ };
+        saveTradesTakenToDisk = async function () { await nlSaveSetupData(); };
+        loadSetupChecklistFromDisk = async function () {
+          // In Netlify mode, checklist is stored inside setup JSON; if missing, fallback to defaults
+          checklistItems = Array.isArray(nlSetupData?.checklistItems) ? nlSetupData.checklistItems : checklistItems;
+        };
+
+        // Strategy notes are inside setup JSON
+        ensureStrategyNotesFileHandle = async function () { };
+        loadStrategyNotesHtml = async function () {
+          return (nlSetupData?.strategyNotesHtml || "").trim();
+        };
+        saveStrategyNotesHtml = async function (html) {
+          if (!nlSetupData) nlSetupData = nlDefaultSetupData(activeSetup);
+          nlSetupData.strategyNotesHtml = html || "";
+          await nlSaveSetupData();
+          statusEl.textContent = "Strategy notes saved";
+          setTimeout(() => (statusEl.textContent = ""), 1200);
+        };
+
+        // Replace file access with URLs
+        getThumbUrl = async function (folder, fileName) {
+          const k = keyFor(folder, fileName);
+          return nlMediaUrlByKey[k] || "";
+        };
+        openFileDirect = async function (folder, fileName) {
+          const url = nlMediaUrlByKey[keyFor(folder, fileName)] || "";
+          if (url) window.open(url, "_blank", "noopener");
+        };
+
+        // Media gallery read
+        readMediaDir = async function (dirName) {
+          const items = [];
+          const src = (dirName === VIDEOS_DIR) ? nlVideos : nlExamples;
+          for (const it of (src || [])) {
+            items.push({
+              name: it.name,
+              url: it.url,
+              dirName
+            });
+          }
+          items.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
+          // mimic previous shape with "handle"
+          return items.map(x => ({ name: x.name, handle: { __url: x.url }, dirName: x.dirName }));
+        };
+        getVideoThumbDataUrl = async function (fileHandle) {
+          // We can't easily grab first frame without fetching; just return the URL (browser will show poster-less thumb as broken).
+          // If you want, we can generate poster thumbs server-side later.
+          return fileHandle?.__url || "";
+        };
+        openMedia = async function (dirName, fileName, fileHandle) {
+          const url = fileHandle?.__url || "";
+          if (!url) return;
+          activeMediaFolder = dirName;
+          activeMediaFileName = fileName;
+          mediaTitle.textContent = `${dirName}\\${fileName}`;
+          mediaImg.style.display = "block";
+          mediaVideo.style.display = "none";
+          mediaImg.src = url;
+          mediaDlg.showModal();
+        };
+        mediaOpenBtn.addEventListener("click", async () => {
+          const url = (activeMediaFolder === VIDEOS_DIR)
+            ? (nlVideos.find(x => x.name === activeMediaFileName)?.url || "")
+            : (nlExamples.find(x => x.name === activeMediaFileName)?.url || "");
+          if (url) window.open(url, "_blank", "noopener");
+        });
+
+        // Add Entry: use file input + upload, no moving
+        pickSourceFolderAndFile = async function () {
+          return new Promise((resolve, reject) => {
+            const inp = document.createElement("input");
+            inp.type = "file";
+            inp.accept = "image/*";
+            inp.onchange = async () => {
+              try {
+                const file = inp.files && inp.files[0];
+                if (!file) return reject(new Error("No file selected."));
+                sourceFileHandle = { __file: file }; // shim
+                sourceFileName = file.name || "image.png";
+                const dot = sourceFileName.lastIndexOf(".");
+                sourceExt = (dot >= 0) ? sourceFileName.slice(dot + 1) : "png";
+                pickedFileLabel.textContent = `Selected image: ${sourceFileName}`;
+                resolve();
+              } catch (e) { reject(e); }
+            };
+            inp.click();
+          });
+        };
+
+        submitAddEntry = async function () {
+          clearAddWarn();
+
+          const session = fSession.value;
+          const symbol = fSymbol.value;
+          const ymd = yymmddFromISO(fDate.value);
+          const wins = fWins.value;
+          const losses = fLosses.value;
+          const partials = fPartials.value;
+          const breakEvens = fBreakEvens.value;
+
+          if (!session || !FOLDERS.includes(session)) return showAddWarn("Invalid Session.");
+          if (!symbol) return showAddWarn("Symbol is required.");
+          if (!ymd) return showAddWarn("Date is required.");
+          if (wins === "" || losses === "" || partials === "" || breakEvens === "") return showAddWarn("Wins/Losses/Partials/BreakEvens required.");
+          if (!Number.isFinite(Number(fTicks.value))) return showAddWarn("Ticks must be a number.");
+          if (!Number.isFinite(Number(fTicksPot.value))) return showAddWarn("PotentialTicks must be a number.");
+          if (!sourceFileHandle?.__file) return showAddWarn("No image selected.");
+
+          const ticks = String(Number(fTicks.value));
+          const ticksPot = String(Number(fTicksPot.value));
+          const newFileName = `${symbol}_${ymd}_${wins}_${losses}_${partials}_${breakEvens}_${ticks}_${ticksPot}.${sourceExt}`;
+
+          if (!nlSetupData) nlSetupData = nlDefaultSetupData(activeSetup || "Default");
+          if (!nlSetupData.sessions) nlSetupData.sessions = Object.fromEntries(FOLDERS.map(s => [s, []]));
+          if (!Array.isArray(nlSetupData.sessions[session])) nlSetupData.sessions[session] = [];
+
+          // collision check by filename
+          if (nlSetupData.sessions[session].some(x => x.fileName === newFileName)) {
+            return showAddWarn(`A file already exists:\n${session}\\${newFileName}\n\nChange values or rename.`);
+          }
+
+          // upload image
+          const up = await nlUploadMedia(sourceFileHandle.__file, "trade");
+
+          // store row
+          nlSetupData.sessions[session].push({
+            fileName: newFileName,
+            imageUrl: up.url,
+            createdAt: new Date().toISOString()
+          });
+
+          // notes + tags
+          const selectedTags = getSelectedTagsFromUI();
+          notes[keyFor(session, newFileName)] = {
+            text: (fNotes.value || "").trim(),
+            tags: selectedTags,
+            updatedAt: new Date().toISOString()
+          };
+
+          // persist
+          nlBuildMediaMapsFromData();
+          await nlSaveSetupData();
+
+          // clear selected
+          sourceFileHandle = null;
+          sourceFileName = "";
+          sourceExt = "";
+          pickedFileLabel.textContent = "No image selected.";
+        };
+
+        // Import media: file input -> upload, add to examples/videos arrays
+        importAndOrganizeMedia = async function () {
+          clearError();
+          if (!nlSetupData) nlSetupData = nlDefaultSetupData(activeSetup || "Default");
+
+          const picker = document.createElement("input");
+          picker.type = "file";
+          picker.multiple = true;
+          picker.accept = "image/*,video/*";
+
+          const files = await new Promise((resolve) => {
+            picker.onchange = () => resolve(Array.from(picker.files || []));
+            picker.click();
+          });
+
+          if (!files.length) return;
+
+          let title = prompt("Enter a title for these media files (they will be renamed as: setupname - title):", "");
+          if (title === null) return;
+          title = sanitizeTitleForFileName(title);
+          if (!title) throw new Error("Title is required.");
+
+          const setupName = sanitizeTitleForFileName(activeSetup || "Setup");
+          let ok = 0, skipped = 0;
+
+          for (const f of files) {
+            const srcName = f.name || "media";
+            const destFolderName = getDestFolderForMedia(srcName);
+            if (!destFolderName) { skipped++; continue; }
+
+            const dot = srcName.lastIndexOf(".");
+            const ext = (dot >= 0 ? srcName.slice(dot + 1) : "").toLowerCase();
+            const base = `${setupName} - ${title}`;
+            const finalName = `${base}.${ext}`;
+
+            const kind = (destFolderName === VIDEOS_DIR) ? "video" : "example";
+            const up = await nlUploadMedia(f, kind);
+
+            const item = { name: finalName, url: up.url, type: kind, uploadedAt: new Date().toISOString() };
+            if (destFolderName === VIDEOS_DIR) {
+              nlSetupData.videos = Array.isArray(nlSetupData.videos) ? nlSetupData.videos : [];
+              nlSetupData.videos.push(item);
+            } else {
+              nlSetupData.examples = Array.isArray(nlSetupData.examples) ? nlSetupData.examples : [];
+              nlSetupData.examples.push(item);
+            }
+            ok++;
+          }
+
+          await nlSaveSetupData();
+          nlBuildMediaMapsFromData();
+
+          statusEl.textContent = `Imported: ${ok}${skipped ? `, skipped: ${skipped}` : ""}`;
+          setTimeout(() => (statusEl.textContent = ""), 2000);
+          await renderActive();
+        };
+
+        // Trades Taken: use uploads + store in nlSetupData.tradesTaken[session]
+        pickTradeTakenImage = async function () {
+          return new Promise((resolve, reject) => {
+            const inp = document.createElement("input");
+            inp.type = "file";
+            inp.accept = "image/*";
+            inp.onchange = async () => {
+              try {
+                const file = inp.files && inp.files[0];
+                if (!file) return reject(new Error("No file selected."));
+                ttSourceFileHandle = { __file: file };
+                ttSourceFileName = file.name || "trade.png";
+                const dot = ttSourceFileName.lastIndexOf(".");
+                ttSourceExt = (dot >= 0) ? ttSourceFileName.slice(dot + 1) : "png";
+                ttPickedLabel.textContent = `Selected image: ${ttSourceFileName}`;
+                resolve();
+              } catch (e) { reject(e); }
+            };
+            inp.click();
+          });
+        };
+
+        submitTradesTakenWizard = async function () {
+          clearTTWarn();
+          const session = ttDlg.dataset.session;
+          if (!session || !FOLDERS.includes(session)) return showTTWarn("Invalid session.");
+          if (!ttSourceFileHandle?.__file) return showTTWarn("Trade image is required. Click “Pick image…”.");
+          const ymd = yymmddFromISO(ttDate.value);
+          if (!ymd) return showTTWarn("Date is required.");
+          if (!ttEntry.value) return showTTWarn("Entry time is required.");
+          if (!ttExit.value) return showTTWarn("Exit time is required.");
+          if (!Number.isFinite(Number(ttTicks.value))) return showTTWarn("Ticks must be a number.");
+
+          const entryPiece = hhmmssToFilePiece(ttEntry.value);
+          const exitPiece = hhmmssToFilePiece(ttExit.value);
+          const ticks = String(Number(ttTicks.value));
+          const safeSetup = String(activeSetup || "").replace(/[<>:"/\\|?*\x00-\x1F]/g, "").trim() || "Setup";
+          const newFileName = `${safeSetup}_${ymd}_entry-${entryPiece}_exit-${exitPiece}_${ticks}.${ttSourceExt}`;
+
+          const up = await nlUploadMedia(ttSourceFileHandle.__file, "taken");
+
+          if (!nlSetupData) nlSetupData = nlDefaultSetupData(activeSetup || "Default");
+          nlSetupData.tradesTaken = nlSetupData.tradesTaken || Object.fromEntries(FOLDERS.map(s => [s, []]));
+          if (!Array.isArray(nlSetupData.tradesTaken[session])) nlSetupData.tradesTaken[session] = [];
+
+          if (nlSetupData.tradesTaken[session].some(x => x.fileName === newFileName)) {
+            return showTTWarn(`File already exists:\n${session}\\${TRADES_TAKEN_SUBDIR}\\${newFileName}`);
+          }
+
+          const checklistData = getWizardChecklistSelected();
+          nlSetupData.tradesTaken[session].push({
+            fileName: newFileName,
+            url: up.url,
+            meta: {
+              setup: activeSetup || "",
+              date: ymd,
+              entry: ttEntry.value,
+              exit: ttExit.value,
+              ticks: Number(ttTicks.value),
+              durationSec: computeDuration(ttEntry.value, ttExit.value),
+              checklist: checklistData,
+              notes: (ttNotes.value || "").trim(),
+              updatedAt: new Date().toISOString()
+            }
+          });
+
+          await nlSaveSetupData();
+          ttDlg.close();
+
+          await refreshAll();
+          sessionContentTab = "taken";
+          await renderActive();
+        };
+
+        // Trades taken rendering from setup JSON
+        readTradesTakenRowsForSession = async function (session) {
+          const arr = (nlSetupData?.tradesTaken?.[session] || []);
+          const out = [];
+          for (const it of arr) {
+            const parsed = parseTradesTakenFileName(it.fileName);
+            if (!parsed) continue;
+            out.push({ ...parsed, __url: it.url });
+          }
+          out.sort((a, b) => (a.ymd + " " + a.entry).localeCompare(b.ymd + " " + b.entry));
+          return out;
+        };
+        getTradesTakenThumbUrl = async function (row) { return row.__url || ""; };
+        getTradesTakenMeta = function (session, fileName) {
+          const arr = (nlSetupData?.tradesTaken?.[session] || []);
+          const it = arr.find(x => x.fileName === fileName);
+          return it?.meta || {};
+        };
+        saveTradesTakenEdit = async function () {
+          clearTTEditWarn();
+          if (!ttEditingSession || !ttEditingFileName) return;
+
+          const arr = (nlSetupData?.tradesTaken?.[ttEditingSession] || []);
+          const it = arr.find(x => x.fileName === ttEditingFileName);
+          if (!it) return;
+
+          it.meta = {
+            ...(it.meta || {}),
+            checklist: getEditChecklistSelected(),
+            notes: (ttEditNotes.value || "").trim(),
+            updatedAt: new Date().toISOString()
+          };
+
+          await nlSaveSetupData();
+          await renderActive();
+          ttEditDlg.close();
+        };
+        openTradesTakenEditModal = async function (session, fileName, parsedRow) {
+          clearTTEditWarn();
+          ttEditingSession = session;
+          ttEditingFileName = fileName;
+
+          await loadSetupChecklistFromDisk();
+
+          ttEditTitle.textContent = `${session}\\${TRADES_TAKEN_SUBDIR}\\${fileName}`;
+
+          const meta = getTradesTakenMeta(session, fileName);
+          ttEditThumb.src = parsedRow?.__url || "";
+          renderChecklistInto(ttEditChecklist, checklistItems, normalizeChecklistForEdit(meta.checklist, checklistItems));
+          ttEditNotes.value = meta.notes || "";
+
+          ttEditDlg.showModal();
+        };
+
+        // Refresh reads from JSON instead of folders
+        refreshAll = async function () {
+          clearError();
+          if (!nlSetupData) return;
+
+          revokeAllThumbs();
+          handleByFolderFile = {};
+          dataByFolder = {};
+
+          for (const folder of FOLDERS) {
+            const items = Array.isArray(nlSetupData.sessions?.[folder]) ? nlSetupData.sessions[folder] : [];
+            const rows = [];
+            for (const it of items) {
+              const row = parseFileName(it.fileName);
+              if (!row) continue;
+              row.__session = folder;
+              // map url
+              if (it.imageUrl) nlMediaUrlByKey[`${folder}|${it.fileName}`] = it.imageUrl;
+              rows.push(row);
+            }
+            dataByFolder[folder] = rows;
+          }
+
+          refreshBtn.disabled = false;
+          saveBtn.disabled = false;
+          csvBtn.disabled = false;
+          addBtn.disabled = false;
+          importMediaBtn.disabled = false;
+
+          renderTabs();
+          await renderActive();
+        };
+
+        // Setup dropdown now from server
+        setActiveSetup = async function (name) {
+          activeSetup = name;
+          localStorage.setItem(ACTIVE_SETUP_KEY, activeSetup);
+
+          await nlLoadSetupData(activeSetup);
+          populateTagMultiSelect();
+          populateDlgTags?.();
+          populateEditTagMultiSelect?.();
+
+          await refreshAll();
+          statusEl.textContent = `Setup: ${activeSetup}`;
+          setTimeout(() => statusEl.textContent = "", 1200);
+        };
+
+        // Disable folder picker; load setups from server on load
+        pickBtn.style.display = "none";
+
+        // override init restore to fetch server setups
+        (async () => {
+          try {
+            await nlLoadSetupIndex();
+            setupNames = nlSetupIndex.length ? nlSetupIndex : ["Default"];
+            const saved = localStorage.getItem(ACTIVE_SETUP_KEY) || "";
+            activeSetup = (saved && setupNames.includes(saved)) ? saved : (setupNames[0] || "Default");
+
+            renderSetupDropdown();
+            if (newSetupBtn) newSetupBtn.disabled = false;
+
+            await setActiveSetup(activeSetup);
+          } catch (e) {
+            showError(e);
+          }
+        })();
+
+        // Create new setup on server
+        createNewSetup = async function () {
+          const raw = prompt("New setup name:", "");
+          if (raw === null) return;
+          const name = sanitizeFolderName(raw);
+          if (!name) throw new Error("Setup name is required.");
+
+          // create on server if missing
+          await nlApiPost("journal_create_setup", { setup: name }, true);
+
+          await nlLoadSetupIndex();
+          setupNames = nlSetupIndex;
+          activeSetup = name;
+          renderSetupDropdown();
+          await setActiveSetup(name);
+        };
+
+        // Prevent FS-only click handlers from firing
+        // (pickBtn is hidden, but keep safe)
+      }
+      // ─────────────────────────────────────────────────────────────────────────────
+
+      // init
+      (async () => {
+        // theme on load: saved preference OR system preference
+        const savedTheme = localStorage.getItem(THEME_KEY);
+        if (savedTheme === "dark" || savedTheme === "light") {
+          applyTheme(savedTheme);
+        } else {
+          const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          applyTheme(prefersDark ? "dark" : "light");
+        }
+
+        // populate wins/losses selects once (0..20)
+        fill0to20(fWins);
+        fill0to20(fLosses);
+        fill0to20(fPartials);
+        fill0to20(fBreakEvens);
+        setAddDefaults();
+
+        const restored = await tryRestoreJournalHandle();
+        if (!restored) {
+          renderTabs();
+          statusEl.textContent = "Pick your Trade Journal folder to begin.";
+          setTimeout(() => { statusEl.textContent = ""; }, 2000);
+        }
+      })();
+
+      // --- Trades Taken --- //
+      function showTTWarn(t) { ttWarn.style.display = "block"; ttWarn.textContent = t; }
+      function clearTTWarn() { ttWarn.style.display = "none"; ttWarn.textContent = ""; }
+
+      function toISODate(d) {
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}`;
+      }
+
+      function toHHMMSS(d) {
+        const hh = String(d.getHours()).padStart(2, "0");
+        const mm = String(d.getMinutes()).padStart(2, "0");
+        const ss = String(d.getSeconds()).padStart(2, "0");
+        return `${hh}:${mm}:${ss}`;
+      }
+
+      function hhmmssToFilePiece(hhmmss) {
+        return (hhmmss || "").replace(/:/g, "-");
+      }
+
+      function getWizardChecklistSelected() {
+        // returns { bias, scores, percent, grade }
+        const state = getChecklistState(ttChecklist);
+        const { percent, sum, max } = computeScorePercent(state.scores);
+        const grade = gradeFromPercent(percent);
+        return {
+          bias: state.bias,
+          scores: state.scores,
+          percent,
+          sum,
+          max,
+          grade
+        };
+      }
+
+
+      function updateTTDuration() {
+        const sec = computeDuration(ttEntry.value, ttExit.value);
+        ttDuration.textContent = fmtDuration(sec);
+      }
+
+      function renderChecklistInto(container, items, selectedObj = null) {
+        // selectedObj: { bias: "bull"|"bear", scores: { [item]: -1|0|1 } }
+        container.innerHTML = "";
+
+        const bias = selectedObj?.bias || "bull";
+        const scores = selectedObj?.scores || {};
+
+        // --- Bias row (Bullish/Bearish) ---
+        const biasWrap = document.createElement("div");
+        biasWrap.style.gridColumn = "1 / -1";
+        biasWrap.style.display = "flex";
+        biasWrap.style.justifyContent = "space-between";
+        biasWrap.style.gap = "10px";
+        biasWrap.style.padding = "8px";
+        biasWrap.style.border = "1px solid var(--border2)";
+        biasWrap.style.borderRadius = "10px";
+        biasWrap.style.background = "var(--bg)";
+
+        biasWrap.innerHTML = `
+          <div style="font-weight:700;">Bias</div>
+          <div style="display:flex; gap:14px; align-items:center;">
+            <label class="chk" style="gap:6px;">
+              <input type="radio" name="tt_bias" value="bull" ${bias === "bull" ? "checked" : ""}/>
+              <span>Bullish</span>
+            </label>
+            <label class="chk" style="gap:6px;">
+              <input type="radio" name="tt_bias" value="bear" ${bias === "bear" ? "checked" : ""}/>
+              <span>Bearish</span>
+            </label>
+          </div>
+          <div class="pill" id="ttScorePill">Score: —</div>
+        `;
+        container.appendChild(biasWrap);
+
+        // --- Checklist items: +1 / 0 / -1 ---
+        for (const item of items) {
+          const v = (item in scores) ? scores[item] : 0;
+
+          const row = document.createElement("div");
+          row.style.gridColumn = "1 / -1";
+          row.style.display = "grid";
+          row.style.gridTemplateColumns = "1fr auto";
+          row.style.gap = "10px";
+          row.style.alignItems = "center";
+          row.style.padding = "8px";
+          row.style.border = "1px solid var(--border2)";
+          row.style.borderRadius = "10px";
+          row.style.background = "var(--bg)";
+
+          const safeName = "tt_item_" + item.replace(/[^a-z0-9]+/gi, "_").toLowerCase();
+
+          row.innerHTML = `
+            <div style="min-width:0;">
+              <div style="font-weight:600; word-break:break-word;">${escapeHtml(item)}</div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; white-space:nowrap;">
+              <label class="chk"><input type="radio" name="${safeName}" value="1" ${v === 1 ? "checked" : ""}/> <span>+1</span></label>
+              <label class="chk"><input type="radio" name="${safeName}" value="0" ${v === 0 ? "checked" : ""}/> <span>0</span></label>
+              <label class="chk"><input type="radio" name="${safeName}" value="-1" ${v === -1 ? "checked" : ""}/> <span>-1</span></label>
+            </div>
+          `;
+
+          // store original item label for later extraction
+          row.dataset.itemLabel = item;
+          container.appendChild(row);
+        }
+
+        // update score whenever anything changes (avoid stacking listeners on re-render)
+        container.onchange = () => updateScoreUI(container);
+        updateScoreUI(container);
+      }
+
+      // small safe HTML helper
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, (ch) => ({
+          "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+        }[ch]));
+      }
+
+
+      async function openTradesTakenWizard(session) {
+        clearTTWarn();
+        ttStage = 1;
+
+        // ensure setup-level data loaded
+        await loadTradesTakenFromDisk();
+        await loadSetupChecklistFromDisk();
+
+        // stage 1 checklist
+        renderChecklistInto(ttChecklist, checklistItems, null);
+
+        // stage 2 defaults
+        ttSetup.value = activeSetup || "";
+        const now = startTradeTs || new Date();
+        ttDate.value = toISODate(now);
+        ttEntry.value = toHHMMSS(now);
+        ttExit.value = "";
+        ttTicks.value = "";
+        ttNotes.value = "";
+        ttDuration.textContent = "—";
+
+        // require image
+        ttSourceDirHandle = null;
+        ttSourceFileHandle = null;
+        ttSourceFileName = "";
+        ttSourceExt = "";
+        ttPickedLabel.textContent = "No image selected.";
+
+        // stage UI
+        setTTStageUI();
+
+        // attach session for submit
+        ttDlg.dataset.session = session;
+
+        ttDlg.showModal();
+      }
+
+      function setTTStageUI() {
+        ttStageTitle.textContent = `Stage ${ttStage}/2`;
+        ttStage1.style.display = (ttStage === 1) ? "block" : "none";
+        ttStage2.style.display = (ttStage === 2) ? "block" : "none";
+
+        ttBack.disabled = (ttStage === 1);
+        ttNext.style.display = (ttStage === 1) ? "inline-block" : "none";
+        ttSubmit.style.display = (ttStage === 2) ? "inline-block" : "none";
+      }
+
+      async function pickTradeTakenImage() {
+        // reuse your existing last-source folder memory
+        let restored = await tryRestoreSourceHandle();
+        if (restored) {
+          ttSourceDirHandle = restored;
+        } else {
+          ttSourceDirHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+          const perm = await ttSourceDirHandle.requestPermission({ mode: "readwrite" });
+          if (perm !== "granted") throw new Error("Permission denied for source folder.");
+          await idbSet(DB_KEY_SOURCE, ttSourceDirHandle);
+        }
+
+        const [fh] = await window.showOpenFilePicker({
+          multiple: false,
+          startIn: ttSourceDirHandle,
+          types: [{
+            description: "Images",
+            accept: { "image/*": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff"] }
+          }]
+        });
+
+        ttSourceFileHandle = fh;
+        ttSourceFileName = fh.name || "";
+        const dot = ttSourceFileName.lastIndexOf(".");
+        ttSourceExt = (dot >= 0) ? ttSourceFileName.slice(dot + 1) : "";
+        if (!ttSourceExt) throw new Error("Selected file has no extension.");
+
+        ttPickedLabel.textContent = `Selected image: ${ttSourceFileName}`;
+      }
+
+      async function submitTradesTakenWizard() {
+        clearTTWarn();
+
+        const session = ttDlg.dataset.session;
+        if (!session || !FOLDERS.includes(session)) return showTTWarn("Invalid session.");
+
+        if (!setupDirHandle) return showTTWarn("No setup selected.");
+        if (!ttSourceDirHandle || !ttSourceFileHandle || !ttSourceFileName || !ttSourceExt) {
+          return showTTWarn("Trade image is required. Click “Pick image…”.");
+        }
+
+        const ymd = yymmddFromISO(ttDate.value); // you already have this helper
+        if (!ymd) return showTTWarn("Date is required.");
+        if (!ttEntry.value) return showTTWarn("Entry time is required.");
+        if (!ttExit.value) return showTTWarn("Exit time is required.");
+        if (!Number.isFinite(Number(ttTicks.value))) return showTTWarn("Ticks must be a number.");
+
+        const entryPiece = hhmmssToFilePiece(ttEntry.value);
+        const exitPiece = hhmmssToFilePiece(ttExit.value);
+        const ticks = String(Number(ttTicks.value));
+
+        const safeSetup = String(activeSetup || "").replace(/[<>:"/\\|?*\x00-\x1F]/g, "").trim() || "Setup";
+        const newFileName = `${safeSetup}_${ymd}_entry-${entryPiece}_exit-${exitPiece}_${ticks}.${ttSourceExt}`;
+
+        // ensure session/_trades-taken exists
+        const sessionDir = await setupDirHandle.getDirectoryHandle(session, { create: true });
+        const ttDir = await sessionDir.getDirectoryHandle(TRADES_TAKEN_SUBDIR, { create: true });
+
+        // collision check
+        try {
+          await ttDir.getFileHandle(newFileName, { create: false });
+          return showTTWarn(`File already exists:\n${session}\\${TRADES_TAKEN_SUBDIR}\\${newFileName}`);
+        } catch { }
+
+        // write file
+        const srcFile = await ttSourceFileHandle.getFile();
+        const buf = await srcFile.arrayBuffer();
+
+        const destHandle = await ttDir.getFileHandle(newFileName, { create: true });
+        const w = await destHandle.createWritable();
+        await w.write(buf);
+        await w.close();
+
+        // persist metadata in TradesTaken.json (extensible)
+        const checklistData = getWizardChecklistSelected();
+        const metaKey = tradesTakenKey(session, newFileName);
+        tradesTaken[metaKey] = {
+          setup: activeSetup || "",
+          date: ymd,
+          entry: ttEntry.value,
+          exit: ttExit.value,
+          ticks: Number(ttTicks.value),
+          durationSec: computeDuration(ttEntry.value, ttExit.value),
+          checklist: checklistData,
+          notes: (ttNotes.value || "").trim(),
+          updatedAt: new Date().toISOString()
+        };
+
+        await saveTradesTakenToDisk();
+
+        // delete original (true move)
+        await ttSourceDirHandle.removeEntry(ttSourceFileName);
+        await idbSet(DB_KEY_SOURCE, ttSourceDirHandle);
+
+        // reset + close
+        ttDlg.close();
+
+        // refresh view
+        await refreshAll();
+        sessionContentTab = "taken";
+        await renderActive();
+      }
+
+      function showTTEditWarn(t) { ttEditWarn.style.display = "block"; ttEditWarn.textContent = t; }
+      function clearTTEditWarn() { ttEditWarn.style.display = "none"; ttEditWarn.textContent = ""; }
+
+      function normalizeChecklistForEdit(raw, items) {
+        // Back-compat: older data may store checklist as string[] (checked items)
+        if (raw && typeof raw === "object" && !Array.isArray(raw) && (raw.scores || raw.bias)) {
+          return raw; // already new shape
+        }
+        const scores = {};
+        const set = new Set(Array.isArray(raw) ? raw : []);
+        for (const it of (items || [])) {
+          // old checkbox = "present" -> +1, otherwise 0
+          scores[it] = set.has(it) ? 1 : 0;
+        }
+        const bias = "bull";
+        const { percent, sum, max } = computeScorePercent(scores);
+        const grade = gradeFromPercent(percent);
+        return { bias, scores, percent, sum, max, grade };
+      }
+
+      function getChecklistSelectedFrom(container) {
+        const state = getChecklistState(container);
+        const { percent, sum, max } = computeScorePercent(state.scores);
+        const grade = gradeFromPercent(percent);
+        return { ...state, percent, sum, max, grade };
+      }
+
+      function getEditChecklistSelected() {
+        return getChecklistSelectedFrom(ttEditChecklist);
+      }
+
+      async function openTradesTakenEditModal(session, fileName, parsedRow) {
+        clearTTEditWarn();
+        ttEditingSession = session;
+        ttEditingFileName = fileName;
+
+        await loadTradesTakenFromDisk();
+        await loadSetupChecklistFromDisk();
+
+        ttEditTitle.textContent = `${session}\\${TRADES_TAKEN_SUBDIR}\\${fileName}`;
+
+        // thumb
+        const rowKey = `${session}|${TRADES_TAKEN_SUBDIR}|${fileName}`;
+        const h = handleByFolderFile[rowKey];
+        if (h) {
+          const file = await h.getFile();
+          const url = URL.createObjectURL(file);
+          ttEditThumb.src = url;
+          ttEditDlg.addEventListener("close", () => { try { URL.revokeObjectURL(url); } catch { } }, { once: true });
+        } else {
+          ttEditThumb.src = "";
+        }
+
+        const meta = getTradesTakenMeta(session, fileName);
+        renderChecklistInto(ttEditChecklist, checklistItems, normalizeChecklistForEdit(meta.checklist, checklistItems));
+        ttEditNotes.value = meta.notes || "";
+
+        ttEditDlg.showModal();
+      }
+
+      async function saveTradesTakenEdit() {
+        clearTTEditWarn();
+        if (!ttEditingSession || !ttEditingFileName) return;
+
+        const k = tradesTakenKey(ttEditingSession, ttEditingFileName);
+        const prev = tradesTaken[k] || {};
+
+        tradesTaken[k] = {
+          ...prev,
+          checklist: getEditChecklistSelected(),
+          notes: (ttEditNotes.value || "").trim(),
+          updatedAt: new Date().toISOString()
+        };
+
+        await saveTradesTakenToDisk();
+        await renderActive();
+        ttEditDlg.close();
+      }
+
+      function getChecklistState(container) {
+        // bias
+        const bias = container.querySelector('input[name="tt_bias"]:checked')?.value || "bull";
+
+        // per item scores
+        const scores = {};
+        const itemRows = Array.from(container.querySelectorAll("[data-item-label]"));
+
+        for (const row of itemRows) {
+          const item = row.dataset.itemLabel;
+          const radios = row.querySelectorAll('input[type="radio"]');
+          // They share name, so checked is enough:
+          const checked = row.querySelector('input[type="radio"]:checked');
+          const val = checked ? Number(checked.value) : 0;
+          scores[item] = (val === 1 || val === 0 || val === -1) ? val : 0;
+        }
+
+        return { bias, scores };
+      }
+
+      function computeScorePercent(scoresObj) {
+        const keys = Object.keys(scoresObj || {});
+        const N = keys.length;
+        if (!N) return { percent: 0, sum: 0, max: 0 };
+
+        let sum = 0;
+        for (const k of keys) sum += Number(scoresObj[k] || 0);
+
+        // map [-N..+N] to [0..1]
+        const percent = (sum + N) / (2 * N);
+        return { percent, sum, max: N };
+      }
+
+      function gradeFromPercent(p) {
+        // p is 0..1
+        if (p >= 1.0) return "A+ (100%)";
+        if (p >= 0.90) return "A (90%)";
+        if (p >= 0.80) return "B+ (80%)";
+        if (p >= 0.70) return "B (70%)";
+        if (p >= 0.60) return "C+ (60%)";
+        if (p >= 0.50) return "C (50%)";
+        return "No Trade";
+      }
+
+      function updateScoreUI(container) {
+        const state = getChecklistState(container);
+        const { percent, sum, max } = computeScorePercent(state.scores);
+        const grade = gradeFromPercent(percent);
+
+        const pill = container.querySelector("#ttScorePill");
+        if (pill) {
+          const pct = Math.round(percent * 100);
+          pill.textContent = `Score: ${pct}% (${sum}/${max}) — ${grade}`;
+        }
+      }
+
+      async function ensureStrategyNotesFileHandle() {
+        if (!setupDirHandle) throw new Error("No setup selected.");
+        strategyNotesFileHandle = await setupDirHandle.getFileHandle(STRATEGY_NOTES_FILENAME, { create: true });
+      }
+
+      async function loadStrategyNotesHtml() {
+        if (!setupDirHandle) {
+          host.innerHTML = `<div class="hint">Pick a setup first to edit Strategy Notes.</div>`;
+          return;
+        }
+        await ensureStrategyNotesFileHandle();
+        const f = await strategyNotesFileHandle.getFile();
+        const txt = await f.text();
+        return (txt || "").trim();
+      }
+
+      async function saveStrategyNotesHtml(html) {
+        await ensureStrategyNotesFileHandle();
+        const w = await strategyNotesFileHandle.createWritable();
+        await w.write(html || "");
+        await w.close();
+        statusEl.textContent = "Strategy notes saved";
+        setTimeout(() => (statusEl.textContent = ""), 1200);
+      }
+
+      function scheduleStrategyNotesSave(getHtmlFn) {
+        if (strategyNotesSaveTimer) clearTimeout(strategyNotesSaveTimer);
+        strategyNotesSaveTimer = setTimeout(async () => {
+          try {
+            await saveStrategyNotesHtml(getHtmlFn());
+          } catch (e) {
+            showError(e);
+          }
+        }, 600);
+      }
+
+      async function renderStrategyNotesInto(hostEl) {
+        hostEl.innerHTML = `
+    <div class="muted" style="margin-top:8px;">
+      Notes are saved per-setup to <b>${STRATEGY_NOTES_FILENAME}</b>
+    </div>
+
+    <div class="rteWrap">
+      <div class="rteBar">
+        <button type="button" data-cmd="bold"><b>B</b></button>
+        <button type="button" data-cmd="italic"><i>I</i></button>
+        <button type="button" data-cmd="underline"><u>U</u></button>
+        <button type="button" data-cmd="insertUnorderedList">• List</button>
+        <button type="button" data-cmd="insertOrderedList">1. List</button>
+        <button type="button" id="rteLinkBtn">Link</button>
+        <span style="flex:1"></span>
+        <button type="button" id="rteSaveBtn">Save now</button>
+      </div>
+
+      <div id="rteEditor" class="rteEditor" contenteditable="true" data-placeholder="Write your strategy notes here..."></div>
+    </div>
+  `;
+
+        const editor = document.getElementById("rteEditor");
+        const saveBtn = document.getElementById("rteSaveBtn");
+        const linkBtn = document.getElementById("rteLinkBtn");
+        const bar = hostEl.querySelector(".rteBar");
+
+        // Load existing
+        let html = "";
+        try {
+          html = await loadStrategyNotesHtml();
+        } catch {
+          html = "";
+        }
+
+        // If empty file, start with a friendly skeleton
+        if (!html) {
+          html = `<h3>${escapeHtml(activeSetup || "Strategy")}</h3>
+<p><b>Intent:</b> </p>
+<p><b>Entry rules:</b> </p>
+<p><b>Invalidation:</b> </p>
+<p><b>Targets:</b> </p>
+<p><b>Common mistakes:</b> </p>`;
+        }
+
+        editor.innerHTML = html;
+
+        // Toolbar commands
+        bar.addEventListener("click", (e) => {
+          const btn = e.target.closest("button[data-cmd]");
+          if (!btn) return;
+          const cmd = btn.dataset.cmd;
+          document.execCommand(cmd, false, null);
+          editor.focus();
+        });
+
+        linkBtn.addEventListener("click", () => {
+          const url = prompt("Enter URL (https://...):", "https://");
+          if (!url) return;
+          document.execCommand("createLink", false, url);
+          editor.focus();
+        });
+
+        // Auto-save
+        editor.addEventListener("input", () => {
+          scheduleStrategyNotesSave(() => editor.innerHTML);
+        });
+
+        // Save now
+        saveBtn.addEventListener("click", async () => {
+          try { await saveStrategyNotesHtml(editor.innerHTML); }
+          catch (e) { showError(e); }
+        });
+      }
+
+
+
+    })(); // --- END OF IIFF -- //
+  </script>
+</body>
+
+</html>
