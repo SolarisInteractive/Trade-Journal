@@ -1,26 +1,29 @@
 import { getStore } from "@netlify/blobs";
+import { okNoContent, text } from "./_common.mjs";
 
-export const handler = async (event) => {
+export default async function (req) {
+  if (req.method === "OPTIONS") return okNoContent();
+  if (req.method !== "GET") return text("Method Not Allowed", 405);
+
   try {
-    const key = String(event.queryStringParameters?.key || "");
-    if (!key) return { statusCode: 400, body: "Missing key" };
+    const url = new URL(req.url);
+    const key = String(url.searchParams.get("key") || "");
+    if (!key) return text("Missing key", 400);
 
     const store = getStore("tradejournal");
     const meta = await store.getMetadata(key);
     const contentType = meta?.metadata?.contentType || "application/octet-stream";
     const buf = await store.get(key, { type: "arrayBuffer" });
-    if (!buf) return { statusCode: 404, body: "Not found" };
+    if (!buf) return text("Not found", 404);
 
-    return {
-      statusCode: 200,
+    return new Response(Buffer.from(buf), {
+      status: 200,
       headers: {
         "content-type": contentType,
         "cache-control": "public, max-age=31536000, immutable",
       },
-      body: Buffer.from(buf).toString("base64"),
-      isBase64Encoded: true,
-    };
+    });
   } catch (e) {
-    return { statusCode: 500, body: String(e?.message || e) };
+    return text(String(e?.message || e), 500);
   }
-};
+}

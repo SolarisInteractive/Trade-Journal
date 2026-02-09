@@ -1,4 +1,4 @@
-import { json, requireWriteKey, getStore } from "./_common.mjs";
+import { json, requireWriteKey, getStore, okNoContent } from "./_common.mjs";
 import crypto from "node:crypto";
 
 function extFromName(name) {
@@ -6,19 +6,22 @@ function extFromName(name) {
   return m ? m[1].toLowerCase() : "bin";
 }
 
-export const handler = async (event) => {
-  const authErr = requireWriteKey(event);
+export default async function (req) {
+  if (req.method === "OPTIONS") return okNoContent();
+  if (req.method !== "POST") return json({ error: "Method Not Allowed" }, 405);
+
+  const authErr = requireWriteKey(req);
   if (authErr) return authErr;
 
   try {
-    const body = JSON.parse(event.body || "{}");
+    const body = await req.json().catch(() => ({}));
     const setup = String(body.setup || "Default").trim() || "Default";
     const kind = String(body.kind || "trade").trim() || "trade";
     const name = String(body.name || "upload").trim() || "upload";
     const mime = String(body.mime || "application/octet-stream");
     const dataB64 = String(body.dataB64 || "");
 
-    if (!dataB64) return json(400, { error: "Missing dataB64" });
+    if (!dataB64) return json({ error: "Missing dataB64" }, 400);
 
     const buf = Buffer.from(dataB64, "base64");
     const ext = extFromName(name);
@@ -26,11 +29,13 @@ export const handler = async (event) => {
     const key = `media/${setup}/${kind}/${id}.${ext}`;
 
     const store = getStore("tradejournal");
-    await store.set(key, buf, { metadata: { contentType: mime, originalName: name, setup, kind } });
+    await store.set(key, buf, {
+      metadata: { contentType: mime, originalName: name, setup, kind },
+    });
 
     const url = `/.netlify/functions/journal_media?key=${encodeURIComponent(key)}`;
-    return json(200, { ok: true, key, url, storedName: `${id}.${ext}` });
+    return json({ ok: true, key, url, storedName: `${id}.${ext}` }, 200);
   } catch (e) {
-    return json(500, { error: String(e?.message || e) });
+    return json({ error: String(e?.message || e) }, 500);
   }
-};
+}

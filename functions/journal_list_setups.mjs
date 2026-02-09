@@ -1,11 +1,14 @@
-import { json, getIndex, getStore } from "./_common.mjs";
+import { json, getIndex, getStore, okNoContent } from "./_common.mjs";
 
-export const handler = async (event) => {
+export default async function (req) {
+  if (req.method === "OPTIONS") return okNoContent();
+  if (req.method !== "GET") return json({ error: "Method Not Allowed" }, 405);
+
   try {
     const store = getStore("tradejournal");
     const setups = await getIndex(store);
-    return json(200, { setups });
+    return json({ setups }, 200);
   } catch (e) {
-    return json(500, { error: String(e?.message || e) });
+    return json({ error: String(e?.message || e) }, 500);
   }
-};
+}

@@ -1,28 +1,43 @@
 import { getStore } from "@netlify/blobs";
 
-function json(statusCode, obj, headers={}) {
-  return {
-    statusCode,
-    headers: { "content-type": "application/json; charset=utf-8", ...headers },
-    body: JSON.stringify(obj),
-  };
+// Modern Netlify Functions (Request/Response) helpers
+
+export function json(obj, status = 200, headers = {}) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      ...headers,
+    },
+  });
 }
 
-function requireWriteKey(event) {
+export function text(body, status = 200, headers = {}) {
+  return new Response(String(body ?? ""), {
+    status,
+    headers: { "content-type": "text/plain; charset=utf-8", ...headers },
+  });
+}
+
+export function okNoContent() {
+  return new Response(null, { status: 204 });
+}
+
+export function requireWriteKey(req) {
   const expected = process.env.JOURNAL_WRITE_KEY || "";
-  if (!expected) return null; // no key required if env not set
-  const got = event.headers?.["x-journal-key"] || event.headers?.["X-Journal-Key"] || "";
-  if (got !== expected) return json(401, { error: "Unauthorized" });
+  if (!expected) return null; // if env not set, allow writes
+  const got = req.headers.get("x-journal-key") || "";
+  if (got !== expected) return json({ error: "Unauthorized" }, 401);
   return null;
 }
 
-async function getIndex(store) {
+export async function getIndex(store) {
   const raw = await store.get("setup_index", { type: "json" });
   return Array.isArray(raw) ? raw : [];
 }
 
-async function saveIndex(store, arr) {
+export async function saveIndex(store, arr) {
   await store.set("setup_index", arr);
 }
 
-export { json, requireWriteKey, getIndex, saveIndex, getStore };
+export { getStore };

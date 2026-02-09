@@ -1,13 +1,17 @@
-import { json, getStore } from "./_common.mjs";
+import { json, getStore, okNoContent } from "./_common.mjs";
 
-export const handler = async (event) => {
+export default async function (req) {
+  if (req.method === "OPTIONS") return okNoContent();
+  if (req.method !== "GET") return json({ error: "Method Not Allowed" }, 405);
+
   try {
-    const setup = String(event.queryStringParameters?.setup || "").trim() || "Default";
+    const url = new URL(req.url);
+    const setup = String(url.searchParams.get("setup") || "").trim() || "Default";
     const store = getStore("tradejournal");
     const key = `setup/${setup}.json`;
     const data = await store.get(key, { type: "json" });
-    return json(200, { setup, data: data || null });
+    return json({ setup, data: data || null }, 200);
   } catch (e) {
-    return json(500, { error: String(e?.message || e) });
+    return json({ error: String(e?.message || e) }, 500);
   }
-};
+}

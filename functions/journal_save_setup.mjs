@@ -1,14 +1,17 @@
-import { json, requireWriteKey, getIndex, saveIndex, getStore } from "./_common.mjs";
+import { json, requireWriteKey, getIndex, saveIndex, getStore, okNoContent } from "./_common.mjs";
 
-export const handler = async (event) => {
-  const authErr = requireWriteKey(event);
+export default async function (req) {
+  if (req.method === "OPTIONS") return okNoContent();
+  if (req.method !== "POST") return json({ error: "Method Not Allowed" }, 405);
+
+  const authErr = requireWriteKey(req);
   if (authErr) return authErr;
 
   try {
-    const body = JSON.parse(event.body || "{}");
+    const body = await req.json().catch(() => ({}));
     const setup = String(body.setup || "").trim() || "Default";
     const data = body.data;
-    if (!data || typeof data !== "object") return json(400, { error: "Missing data" });
+    if (!data || typeof data !== "object") return json({ error: "Missing data" }, 400);
 
     const store = getStore("tradejournal");
 
@@ -16,7 +19,7 @@ export const handler = async (event) => {
     const setups = await getIndex(store);
     if (!setups.includes(setup)) {
       setups.push(setup);
-      setups.sort((a,b)=>a.localeCompare(b, undefined, {numeric:true, sensitivity:"base"}));
+      setups.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
       await saveIndex(store, setups);
     }
 
@@ -25,8 +28,8 @@ export const handler = async (event) => {
     data.updatedAt = new Date().toISOString();
     await store.set(key, data);
 
-    return json(200, { ok: true });
+    return json({ ok: true }, 200);
   } catch (e) {
-    return json(500, { error: String(e?.message || e) });
+    return json({ error: String(e?.message || e) }, 500);
   }
-};
+}
